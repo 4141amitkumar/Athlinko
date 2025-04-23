@@ -1,66 +1,42 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import athleteGif from '../assets/illustrations/Athletics-bro.png';
+import './Home.css';
 
-function Home() {
+function Home({ darkMode }) {
   return (
-    <div style={styles.container}>
-      <h1 style={styles.heading}>Welcome to <span style={{ color: '#3B82F6' }}>Athlinko</span> 🏅</h1>
-      <p style={styles.subheading}>
-        Connecting Athletes & Coaches from all over India.<br />
-        Discover talent. Get trained. Get noticed.
-      </p>
+    <div className={`home-wrapper ${darkMode ? 'dark' : ''}`}>
+      <main className="home-main">
+        <div className="main-left-left"></div>
+        <div className="main-left">
+          <h1>Welcome to your athletic community</h1>
+          <p className="home-subtitle">Connect with athletes, coaches, and clubs around you.</p>
 
-      <div style={styles.buttonContainer}>
-        <Link to="/register" style={{ ...styles.button, backgroundColor: '#3B82F6' }}>Join Now</Link>
-        <Link to="/login" style={{ ...styles.button, backgroundColor: '#10B981' }}>Login</Link>
-      </div>
+          <button className="google-btn">
+            <img
+              src='https://cdn4.iconfinder.com/data/icons/logos-brands-7/512/google_logo-google_icongoogle-512.png'
+              alt="Google"
+            />
+            Continue with Google
+          </button>
 
-      <img
-        src="https://c1.staticflickr.com/1/578/21820499801_7cb12b1043_b.jpg"
-        alt="Athletes"
-        style={styles.image}
-      />
+          <button className="email-btn">Sign in with email</button>
+
+          <p className="terms">
+            By clicking Continue, you agree to Athlinko’s <a href="/">Terms</a>, <a href="/">Privacy Policy</a>, and <a href="/">Cookie Policy</a>.
+          </p>
+
+          <p className="join-link">
+            New to Athlinko? <Link to="/register">Join now</Link>
+          </p>
+        </div>
+
+        <div className="main-right">
+          <img src={athleteGif} alt="Sport animation" className="home-animation pulse-img" />
+        </div>
+      </main>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    textAlign: 'center',
-    padding: '2rem',
-    fontFamily: 'Arial, sans-serif',
-  },
-  heading: {
-    fontSize: '2.8rem',
-    marginBottom: '1rem',
-  },
-  subheading: {
-    fontSize: '1.2rem',
-    color: '#555',
-    marginBottom: '2rem',
-  },
-  buttonContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    gap: '1rem',
-    marginBottom: '2rem',
-    flexWrap: 'wrap',
-  },
-  button: {
-    padding: '0.8rem 2rem',
-    color: '#fff',
-    textDecoration: 'none',
-    borderRadius: '8px',
-    fontWeight: 'bold',
-    fontSize: '1rem',
-    transition: 'background-color 0.3s ease',
-  },
-  image: {
-    maxWidth: '100%',
-    borderRadius: '12px',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-    marginTop: '1.5rem',
-  },
-};
 
 export default Home;
