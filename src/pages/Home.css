@@ -1,203 +1,213 @@
 /* Base Styles */
 .home-wrapper {
-    font-family: 'Segoe UI', sans-serif;
-    padding: 1rem 2rem;
-    color: #8B0000;
-    min-height: 100vh;
-    transition: background-color 0.3s, color 0.3s;
-  }
-  
-  /* Flex Container */
+  font-family: 'Segoe UI', sans-serif;
+  padding: 1rem 2rem;
+  color: #8B0000;
+  min-height: 100vh;
+  transition: background-color 0.3s, color 0.3s;
+  background: #f4f7fb;
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+/* Flex Container */
+.home-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+/* Left Content */
+.main-left-left {
+  width: 100px;
+}
+
+.main-left {
+  max-width: 500px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.main-left h1 {
+  font-size: 2.8rem;
+  margin-bottom: 2rem;
+  line-height: 1.2;
+}
+
+.home-subtitle {
+  font-size: 1.1rem;
+  color: #4b5563;
+  margin-bottom: 1.5rem;
+}
+
+/* Buttons */
+.google-btn, .email-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 30px;
+  cursor: pointer;
+  width: 100%;
+  max-width: 300px;
+  margin-bottom: 1rem;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.google-btn {
+  background-color: #ffffff;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.google-btn:hover {
+  background-color: #f7f8f8;
+  border-color: #c6c6c6;
+}
+
+.google-btn img {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+}
+
+.email-btn {
+  background-color: #ffffff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.email-btn:hover {
+  background-color: #f9fafb;
+  border-color: #cbd5e1;
+}
+
+/* Text Blocks */
+.terms {
+  font-size: 0.8rem;
+  color: #6B7280;
+}
+
+.join-link {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+/* Right Animation/Image */
+.main-right {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.home-animation {
+  max-width: 650px;
+  width: 100%;
+  height: auto;
+}
+
+/* 🌙 Dark Mode */
+.dark {
+  background-color: #181818;
+  color: #f5f5f5;
+}
+
+.dark h1,
+.dark h2,
+.dark .home-subtitle,
+.dark .terms,
+.dark .join-link,
+.dark p {
+  color: #f5f5f5;
+}
+
+.dark a {
+  color: #A7C7E7;
+}
+
+.dark a:hover {
+  color: #fff;
+}
+
+.dark .google-btn {
+  background-color: #2c2c2c;
+  color: #f5f5f5;
+  border-color: #444;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.dark .google-btn:hover {
+  background-color: #3a3a3a;
+  border-color: #555;
+}
+
+.dark .email-btn {
+  background-color: #2f2f2f;
+  color: #f5f5f5;
+  border: 1px solid #444;
+}
+
+.dark .email-btn:hover {
+  background-color: #3b3b3b;
+}
+
+.dark input {
+  background-color: #2a2a2a;
+  color: #ffffff;
+  border: 1px solid #555;
+}
+
+.dark input::placeholder {
+  color: #999;
+}
+
+* {
+  transition: background-color 0.1s, color 0.1s, border-color 0.1s;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 768px) {
   .home-main {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 2rem;
-  }
-  
-  /* Left Content */
-  .main-left-left {
-    width: 100px;
-  }
-  
-  .main-left {
-    max-width: 500px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     align-items: center;
     text-align: center;
   }
-  
+
   .main-left h1 {
-    font-size: 2.8rem;
-    margin-bottom: 2rem;
-    line-height: 1.2;
+    font-size: 2rem;
   }
-  
-  /* Buttons */
-  .google-btn, .email-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.8rem 1.5rem;
-    font-size: 1rem;
-    font-weight: 500;
-    border-radius: 30px;
-    cursor: pointer;
-    width: 100%;
-    max-width: 300px;
-    margin-bottom: 1rem;
-    transition: background-color 0.3s ease;
-  }
-  
-  .google-btn {
-    background-color: #fff;
-    color: #000;
-    border: 1px solid #d1d5db;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  }
-  
-  .google-btn:hover {
-    background-color: #f9fafb;
-  }
-  
-  .google-btn img {
-    width: 20px;
-    height: 20px;
-    margin-right: 10px;
-  }
-  
+
+  .google-btn,
   .email-btn {
-    background-color: #f3f4f7;
-    border: 1px solid black;
+    width: 90%;
   }
-  
-  .email-btn:hover {
-    background-color: #e5e7eb;
-  }
-  
-  /* Text Blocks */
-  .terms {
-    font-size: 0.8rem;
-    color: #6B7280;
-  }
-  
-  .join-link {
-    margin-top: 1rem;
-    font-size: 0.9rem;
-  }
-  
-  /* Right Animation/Image */
-  .main-right {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    margin-top: 1rem;
-  }
-  
+
   .home-animation {
-    max-width: 650px;
-    width: 100%;
-    height: auto;
+    max-width: 90%;
   }
-  
-  /* 🌙 Dark Mode */
-  .dark {
-    background-color: #181818; /* softer than pure black */
-    color: #e0e0e0;
+}
+
+@media (max-width: 480px) {
+  .home-wrapper {
+    padding: 1rem;
   }
-  
-  /* Buttons in dark mode */
-  .dark .google-btn {
-    background-color: #2c2c2c;
-    color: #f5f5f5;
-    border-color: #444;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+
+  .main-left h1 {
+    font-size: 1.6rem;
   }
-  
-  .dark .google-btn:hover {
-    background-color: #3a3a3a;
+
+  .terms,
+  .join-link {
+    font-size: 0.75rem;
   }
-  
-  .dark .email-btn {
-    background-color: #303030;
-    color: #f5f5f5;
-    border: 1px solid #555;
-  }
-  
-  .dark .email-btn:hover {
-    background-color: #404040;
-  }
-  
-  /* Input fields or custom input appearance (if needed) */
-  .dark input {
-    background-color: #2a2a2a;
-    color: #ffffff;
-    border: 1px solid #555;
-  }
-  
-  .dark input::placeholder {
-    color: #999;
-  }
-  
-  .dark .terms a,
-  .dark .join-link a {
-    color: #6ec1e4;
-    text-decoration: underline;
-  }
-  
-  .dark .terms a:hover,
-  .dark .join-link a:hover {
-    color: #90cdf4;
-  }
-  
-  .dark h1,
-  .dark h2,
-  .dark label {
-    color: #f5f5f5;
-  }
-  * {
-    transition: background-color 0.1s, color 0.1s, border-color 0.1s;
-  }
-  
-  /* Responsive Breakpoints */
-  
-  /* Tablets and below */
-  @media (max-width: 768px) {
-    .home-main {
-      flex-direction: column-reverse;
-      align-items: center;
-      text-align: center;
-    }
-  
-    .main-left h1 {
-      font-size: 2rem;
-    }
-  
-    .google-btn,
-    .email-btn {
-      width: 90%;
-    }
-  
-    .home-animation {
-      max-width: 90%;
-    }
-  }
-  
-  /* Mobile phones */
-  @media (max-width: 480px) {
-    .home-wrapper {
-      padding: 1rem;
-    }
-  
-    .main-left h1 {
-      font-size: 1.6rem;
-    }
-  
-    .terms, .join-link {
-      font-size: 0.75rem;
-    }
-  }
-  
+}
