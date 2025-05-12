@@ -6,7 +6,7 @@ body {
 }
 
 /* Container */
-.login-container {
+.register-container {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -16,7 +16,7 @@ body {
 }
 
 /* Card */
-.login-card {
+.register-card {
   background: rgba(255, 255, 255, 0.9);
   padding: 2.5rem;
   border-radius: 18px;
@@ -28,92 +28,49 @@ body {
 }
 
 /* Title */
-.login-title {
+.register-title {
   font-size: 1.8rem;
   font-weight: 700;
   color: #1f3a93;
   text-align: center;
-}
-
-.subtitle {
-  text-align: center;
-  font-size: 0.95rem;
-  margin-bottom: 1.8rem;
-  color: #555;
-}
-
-.brand {
-  color: #f64740;
+  margin-bottom: 1.5rem;
 }
 
 /* Form */
-.login-form {
+.register-form {
   display: flex;
   flex-direction: column;
 }
 
-.login-form label {
+.register-form label {
   font-weight: 500;
   margin-bottom: 6px;
   color: #333;
 }
 
-.login-form input {
+.register-form input,
+.register-form select {
   padding: 0.75rem 1rem;
   border-radius: 10px;
   border: 1px solid #ccc;
   margin-bottom: 1.2rem;
-  font-size: 1rem;
   color: black;
+  font-size: 1rem;
   background-color: #fdfdfd;
   transition: 0.3s;
 }
 
-.login-form input:focus {
+.register-form input:focus,
+.register-form select:focus {
   border-color: #1f3a93;
   box-shadow: 0 0 0 3px rgba(31, 58, 147, 0.15);
   outline: none;
 }
-
-/* Password eye */
-.password-field {
-  position: relative;
-  display: flex;
-  align-items: center;
+.brand {
+  color: #f64740;
 }
-
-.password-field input {
-  width: 100%;
-  padding-right: 40px;
-}
-
-.toggle-eye {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: #666;
-}
-
-/* Footer Links */
-.form-footer {
-  text-align: right;
-  margin-bottom: 1.5rem;
-}
-
-.forgot-link {
-  font-size: 0.9rem;
-  color: #1f3a93;
-  text-decoration: none;
-}
-
-.forgot-link:hover {
-  text-decoration: underline;
-}
-
 /* Button */
-.login-button {
+.register-button {
   padding: 0.75rem;
   background-color: #1f3a93;
   color: white;
@@ -125,23 +82,19 @@ body {
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
-.login-button:hover {
+.register-button:hover {
   background-color: #16376b;
   transform: translateY(-2px);
 }
 
 /* Responsive */
 @media (max-width: 480px) {
-  .login-card {
+  .register-card {
     padding: 1.8rem;
   }
 
-  .login-title {
+  .register-title {
     font-size: 1.5rem;
-  }
-
-  .subtitle {
-    font-size: 0.9rem;
   }
 }
 
@@ -150,47 +103,37 @@ body {
   background: linear-gradient(135deg, #1a1a1a, #0d0d0d);
 }
 
-.dark .login-card {
+.dark .register-card {
   background: rgba(30, 30, 30, 0.95);
   color: #e0e0e0;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.dark .login-title {
+.dark .register-title {
   color: #90cdf4;
 }
 
-.dark .subtitle {
-  color: #aaa;
-}
-
-.dark .login-form label {
+.dark .register-form label {
   color: #ccc;
 }
 
-.dark .login-form input {
+.dark .register-form input,
+.dark .register-form select {
   background-color: #2a2a2a;
   color: #f0f0f0;
   border-color: #444;
 }
 
-.dark .login-form input:focus {
+.dark .register-form input:focus,
+.dark .register-form select:focus {
   border-color: #90cdf4;
   box-shadow: 0 0 0 3px rgba(144, 205, 244, 0.25);
 }
 
-.dark .toggle-eye {
-  color: #aaa;
-}
-
-.dark .forgot-link {
-  color: #90cdf4;
-}
-
-.dark .login-button {
+.dark .register-button {
   background-color: #3182ce;
 }
 
-.dark .login-button:hover {
+.dark .register-button:hover {
   background-color: #2563eb;
 }

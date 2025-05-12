@@ -17,8 +17,9 @@ function Login({ darkMode }) {
     <div className={`login-container ${darkMode ? 'dark' : ''}`}>
       <div className="login-card">
         <h2 className="login-title">
-          Login to <span className="brand">Athlinko</span>
+          Welcome Back to <span className="brand">Athlinko</span>
         </h2>
+        <p className="subtitle">Log in and start connecting</p>
 
         <form onSubmit={handleSubmit} className="login-form">
           <label>Email</label>
@@ -27,7 +28,7 @@ function Login({ darkMode }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            placeholder="Enter your email"
+            placeholder="you@example.com"
           />
 
           <label>Password</label>
@@ -48,10 +49,11 @@ function Login({ darkMode }) {
             </span>
           </div>
 
-          <div className="forgot-password">
-            <a href="/forgot-password">Forgot Password?</a>
+          <div className="form-footer">
+            <a href="/forgot-password" className="forgot-link">Forgot Password?</a>
           </div>
-          <button type="submit">Login</button>
+
+          <button type="submit" className="login-button">Login</button>
         </form>
       </div>
     </div>

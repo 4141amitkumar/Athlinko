@@ -46,7 +46,7 @@
 }
 
 /* Buttons */
-.google-btn, .email-btn {
+.auth-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -57,38 +57,36 @@
   cursor: pointer;
   width: 100%;
   max-width: 300px;
+  height: 56px;
   margin-bottom: 1rem;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-
-.google-btn {
   background-color: #ffffff;
   color: #3c4043;
   border: 1px solid #dadce0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
-.google-btn:hover {
+.auth-btn:hover {
   background-color: #f7f8f8;
   border-color: #c6c6c6;
 }
 
-.google-btn img {
+.auth-btn img {
   width: 20px;
   height: 20px;
   margin-right: 10px;
 }
 
-.email-btn {
-  background-color: #ffffff;
-  color: #111827;
-  border: 1px solid #d1d5db;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+/* Dark Mode for Email Link */
+.dark .email-btn-link {
+  background-color: #2f2f2f;
+  color: #f5f5f5;
+  border: 1px solid #444;
 }
 
-.email-btn:hover {
-  background-color: #f9fafb;
-  border-color: #cbd5e1;
+.dark .email-btn-link:hover {
+  background-color: #3b3b3b;
 }
 
 /* Text Blocks */

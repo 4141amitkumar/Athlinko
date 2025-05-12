@@ -1,7 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import './style.css'; // We'll create this file for basic styling
+import './style.css';
+import GoogleAuthProvider from './GoogleAuthProvider';
+
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
+root.render(
+  <GoogleAuthProvider>
+    <App />
+  </GoogleAuthProvider>
+);
