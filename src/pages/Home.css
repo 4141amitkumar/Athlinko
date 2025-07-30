@@ -120,7 +120,9 @@
   color: #f5f5f5;
 }
 
-.dark h1,
+.dark h1{ 
+  color: #9c1414;
+}
 .dark h2,
 .dark .home-subtitle,
 .dark .terms,
