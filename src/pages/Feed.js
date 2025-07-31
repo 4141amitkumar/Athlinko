@@ -1,23 +1,132 @@
-import React from 'react';
-import './Feed.css';
+import React, { useState, useEffect } from "react";
+import "./Feed.css";
 
 function Feed({ user }) {
+  const [posts, setPosts] = useState([]);
+  const [newPost, setNewPost] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // ✅ Fetch posts
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/posts");
+        const data = await res.json();
+        setPosts(data);
+      } catch (err) {
+        console.error("Error fetching posts:", err);
+      }
+    };
+    fetchPosts();
+  }, []);
+
+  // ✅ Handle new post
+  const handlePostSubmit = async (e) => {
+    e.preventDefault();
+    if (!newPost.trim()) return;
+
+    try {
+      setLoading(true);
+      const res = await fetch("http://localhost:5000/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user?._id,
+          content: newPost,
+        }),
+      });
+
+      const data = await res.json();
+
+      // ✅ Ensure populated user info
+      const populatedPost = {
+        ...data,
+        user: {
+          _id: user?._id,
+          name: user?.name,
+          picture: user?.picture,
+        },
+      };
+
+      setPosts([populatedPost, ...posts]);
+      setNewPost("");
+    } catch (err) {
+      console.error("Error creating post:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="feed-wrapper">
-      <h2>Welcome, {user.name} 👋</h2>
-      <p>This is your Athlinko feed. Soon you'll see posts from athletes and coaches!</p>
+      <div className="feed-container">
+        <h2 className="feed-title">
+          Welcome back, {user?.name?.split(" ")[0] || "Athlinko Member"} 👋
+        </h2>
 
-      {/* Sample profile/post */}
-      <div className="post-card">
-        <div className="profile-section">
-          <img src={user.picture} alt={user.name} className="profile-img" />
-          <div>
-            <strong>{user.name}</strong>
-            <p>Athlete | Sprinter</p>
+        {/* Post Creation Box */}
+        <form className="post-form" onSubmit={handlePostSubmit}>
+          <div className="post-form-header">
+            <img
+              src={user?.picture || "https://via.placeholder.com/50"}
+              alt="Profile"
+              className="profile-img"
+            />
+            <textarea
+              value={newPost}
+              onChange={(e) => setNewPost(e.target.value)}
+              placeholder="Share something with your community..."
+              rows="2"
+            />
           </div>
+          <button type="submit" disabled={loading} className="post-btn">
+            {loading ? "Posting..." : "Post"}
+          </button>
+        </form>
+
+        {/* Posts Feed */}
+        <div className="posts">
+          {posts.length === 0 ? (
+            <p className="no-posts">No posts yet. Be the first one!</p>
+          ) : (
+            posts.map((post) => (
+              <div key={post._id} className="post-card">
+                {/* Header */}
+                <div className="profile-section">
+                  <img
+                    src={post?.user?.picture || "https://via.placeholder.com/50"}
+                    alt="Profile"
+                    className="profile-img"
+                  />
+                  <div className="profile-info">
+                    <strong>{post?.user?.name || "Unknown User"}</strong>
+                    <span className="post-time">
+                      {post?.createdAt
+                        ? new Date(post.createdAt).toLocaleString()
+                        : "Just now"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Content */}
+                {post?.content && (
+                  <p className="post-content">{post.content}</p>
+                )}
+
+                {post?.image && (
+                  <img src={post.image} alt="Post" className="post-img" />
+                )}
+
+                {/* Actions */}
+                <div className="post-actions">
+                  <button className="post-action-btn">❤️ Like</button>
+                  <button className="post-action-btn">💬 Comment</button>
+                  <button className="post-action-btn">↗ Share</button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
-        <img src="https://source.unsplash.com/featured/?athlete" alt="Post" className="post-img" />
-        <p><strong>{user.name}</strong>: Training hard for the nationals! 💪</p>
       </div>
     </div>
   );

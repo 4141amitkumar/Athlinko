@@ -12,12 +12,13 @@ function NavBar({ darkMode, setDarkMode, user, setUser }) {
   const handleLogout = () => {
     setUser(null);
     setShowDropdown(false);
+    localStorage.removeItem('athlinkoUser'); // ✅ ensure session clear
   };
 
   const handleSearch = () => {
     if (searchQuery.trim() !== '') {
       console.log('Searching for:', searchQuery);
-      // Add navigation or search result logic here
+      // Future: Navigate to search results page
     }
   };
 
@@ -46,13 +47,7 @@ function NavBar({ darkMode, setDarkMode, user, setUser }) {
             <div className="search-container">
               <div className="search-box">
                 <span className="search-icon">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="18"
-                    height="18"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M10 2a8 8 0 105.293 14.293l5.707 5.707 1.414-1.414-5.707-5.707A8 8 0 0010 2zm0 2a6 6 0 110 12A6 6 0 0110 4z" />
                   </svg>
                 </span>
@@ -67,11 +62,13 @@ function NavBar({ darkMode, setDarkMode, user, setUser }) {
             </div>
           )}
 
+          {/* Dark Mode Toggle */}
           <label className="switch">
             <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
             <span className="slider"></span>
           </label>
 
+          {/* Profile Dropdown */}
           {user && (
             <div className="profile-container" tabIndex={0}>
               <img
@@ -82,10 +79,26 @@ function NavBar({ darkMode, setDarkMode, user, setUser }) {
               />
               {showDropdown && (
                 <div className="profile-dropdown">
-                  <p><strong>{user.name}</strong></p>
-                  <p>{user.email}</p>
+                  <div className="profile-header">
+                    <img src={user.picture} alt="User" className="dropdown-pic" />
+                    <div>
+                      <p className="profile-name">{user.name}</p>
+                      <p className="profile-email">{user.email}</p>
+                    </div>
+                  </div>
                   <hr />
-                  <button onClick={handleLogout} className="logout-btn">Logout</button>
+                  <button onClick={handleLogout} className="logout-btn">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="logout-icon"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1" />
+                    </svg>
+                    Sign Out
+                  </button>
                 </div>
               )}
             </div>

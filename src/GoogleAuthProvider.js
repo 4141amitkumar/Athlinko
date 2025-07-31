@@ -1,14 +1,12 @@
 import React from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
-const clientId = '165588625840-gip3rorr4q8bb44klbc4eakbavg8jbvn.apps.googleusercontent.com';  
-
-const GoogleAuthProvider = ({ children }) => {
+const GoogleAuthProviderWrapper = ({ children }) => {
   return (
-    <GoogleOAuthProvider clientId={clientId}>
+    <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
       {children}
     </GoogleOAuthProvider>
   );
 };
 
-export default GoogleAuthProvider;
+export default GoogleAuthProviderWrapper;
