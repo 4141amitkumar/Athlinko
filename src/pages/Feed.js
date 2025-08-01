@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import "./Feed.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+// ✅ Helper function to safely join paths
+const api = (path) => `${API_URL}${path.startsWith("/") ? path : "/" + path}`;
+
 function Feed({ user }) {
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState("");
@@ -11,7 +15,8 @@ function Feed({ user }) {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/posts`);
+        console.log("Fetching posts from:", api("/api/posts")); // debug
+        const res = await fetch(api("/api/posts"));
         const data = await res.json();
         setPosts(data);
       } catch (err) {
@@ -28,7 +33,9 @@ function Feed({ user }) {
 
     try {
       setLoading(true);
-      const res = await fetch(`${API_URL}/api/posts`, {
+      console.log("Creating post at:", api("/api/posts")); // debug
+
+      const res = await fetch(api("/api/posts"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

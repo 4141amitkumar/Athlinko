@@ -59,7 +59,7 @@ function Home({ darkMode, setUser }) {
       };
 
       // Send to backend
-      const res = await fetch(`${API_URL}api/users/register`, {
+      const res = await fetch(`${API_URL}/api/users/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userWithRole),
