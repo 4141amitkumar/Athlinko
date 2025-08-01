@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import athleteGif from "../assets/illustrations/Athletics-bro.png";
 import "./Home.css";
-import API_BASE from "../config";
+
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 function Home({ darkMode, setUser }) {
   const navigate = useNavigate();
@@ -58,7 +59,7 @@ function Home({ darkMode, setUser }) {
       };
 
       // Send to backend
-      const res = await fetch(`${API_BASE}/api/users/register`, {
+      const res = await fetch(`${API_URL}/api/users/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userWithRole),

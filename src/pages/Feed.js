@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Feed.css";
-import API_BASE from "../config";
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000";
 function Feed({ user }) {
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState("");
@@ -11,7 +11,7 @@ function Feed({ user }) {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/posts`);
+        const res = await fetch(`${API_URL}/api/posts`);
         const data = await res.json();
         setPosts(data);
       } catch (err) {
@@ -28,7 +28,7 @@ function Feed({ user }) {
 
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/api/posts`, {
+      const res = await fetch(`${API_URL}/api/posts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
