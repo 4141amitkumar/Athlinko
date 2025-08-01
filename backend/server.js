@@ -14,11 +14,12 @@ connectDB();
 const app = express();
 
 // Middleware
-app.use(express.json());
 app.use(cors({
-  origin: ["https://athlinko.vercel.app", "http://localhost:4000"],
+  origin: ["https://athlinko.vercel.app", "http://localhost:4000"], // allowed origins
+  methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
+app.use(express.json());
 
 // Root route
 app.get("/", (req, res) => {
@@ -28,6 +29,10 @@ app.get("/", (req, res) => {
 // Routes
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
+
+ongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch(err => console.error("❌ MongoDB Error:", err));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
