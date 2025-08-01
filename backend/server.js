@@ -13,10 +13,7 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(cors({
-  origin: ["http://localhost:4000", "https://athlinko.vercel.app"],
-  credentials: true
-}));
+app.use(cors());
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
 });
