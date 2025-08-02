@@ -9,13 +9,15 @@ const api = (path) => `${API_URL}${path.startsWith("/") ? path : "/" + path}`;
 function Feed({ user }) {
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState("");
+  const [image, setImage] = useState(null);
+  const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
 
   // ✅ Fetch posts
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        console.log("Fetching posts from:", api("/api/posts")); // debug
+        console.log("Fetching posts from:", api("/api/posts"));
         const res = await fetch(api("/api/posts"));
         const data = await res.json();
         setPosts(data);
@@ -29,24 +31,23 @@ function Feed({ user }) {
   // ✅ Handle new post
   const handlePostSubmit = async (e) => {
     e.preventDefault();
-    if (!newPost.trim()) return;
+    if (!newPost.trim() && !image) return;
 
     try {
       setLoading(true);
-      console.log("Creating post at:", api("/api/posts")); // debug
+
+      const formData = new FormData();
+      formData.append("userId", user?._id);
+      formData.append("content", newPost);
+      if (image) formData.append("image", image);
 
       const res = await fetch(api("/api/posts"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user?._id,
-          content: newPost,
-        }),
+        body: formData, // ✅ no need for Content-Type, browser sets it
       });
 
       const data = await res.json();
 
-      // ✅ Ensure populated user info
       const populatedPost = {
         ...data,
         user: {
@@ -58,10 +59,21 @@ function Feed({ user }) {
 
       setPosts([populatedPost, ...posts]);
       setNewPost("");
+      setImage(null);
+      setPreview(null);
     } catch (err) {
       console.error("Error creating post:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ Image Preview
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setImage(file);
+    if (file) {
+      setPreview(URL.createObjectURL(file));
     }
   };
 
@@ -87,6 +99,22 @@ function Feed({ user }) {
               rows="2"
             />
           </div>
+
+          {/* ✅ File input */}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="file-input"
+          />
+
+          {/* ✅ Image Preview */}
+          {preview && (
+            <div className="preview-container">
+              <img src={preview} alt="Preview" className="preview-img" />
+            </div>
+          )}
+
           <button type="submit" disabled={loading} className="post-btn">
             {loading ? "Posting..." : "Post"}
           </button>
@@ -121,6 +149,7 @@ function Feed({ user }) {
                   <p className="post-content">{post.content}</p>
                 )}
 
+                {/* ✅ Show post image if available */}
                 {post?.image && (
                   <img src={post.image} alt="Post" className="post-img" />
                 )}

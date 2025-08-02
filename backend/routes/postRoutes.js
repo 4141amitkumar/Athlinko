@@ -1,17 +1,36 @@
 import express from "express";
 import Post from "../models/Post.js";
+import upload from "../middleware/multer.js";
+import cloudinary from "../config/cloudinary.js";
 
 const router = express.Router();
 
-// ✅ Create a Post
-router.post("/", async (req, res) => {
+// ✅ Create a Post (with optional image upload)
+router.post("/", upload.single("image"), async (req, res) => {
   try {
-    const { userId, content, image } = req.body;
+    const { userId, content } = req.body;
+    let imageUrl = "";
 
+    // ✅ Upload image to Cloudinary if provided
+    if (req.file) {
+      const result = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "athlinko_posts" },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        stream.end(req.file.buffer);
+      });
+      imageUrl = result.secure_url;
+    }
+
+    // ✅ Create post
     const newPost = new Post({
       user: userId,
       content,
-      image,
+      image: imageUrl || null,
     });
 
     await newPost.save();
@@ -19,7 +38,8 @@ router.post("/", async (req, res) => {
 
     res.status(201).json(populatedPost);
   } catch (err) {
-    res.status(500).json({ message: "Failed to create post", error: err });
+    console.error("❌ Post creation error:", err);
+    res.status(500).json({ message: "Failed to create post", error: err.message });
   }
 });
 
@@ -28,7 +48,7 @@ router.get("/", async (req, res) => {
   try {
     const posts = await Post.find()
       .populate("user", "name email picture")
-      .populate("comments.user", "name picture") // ✅ populate comments
+      .populate("comments.user", "name picture")
       .sort({ createdAt: -1 });
     res.json(posts);
   } catch (err) {

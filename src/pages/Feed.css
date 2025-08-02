@@ -183,3 +183,18 @@
   font-style: italic;
   margin-top: 1.5rem;
 }
+
+.file-input {
+  margin: 0.5rem 0;
+}
+
+.preview-container {
+  margin-top: 0.8rem;
+}
+
+.preview-img {
+  max-width: 100%;
+  max-height: 250px;
+  border-radius: 12px;
+  box-shadow: 0px 3px 6px rgba(0,0,0,0.2);
+}
