@@ -17,6 +17,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 2rem;
+  min-height: calc(100vh - 100px); /* Adjust based on navbar height */
 }
 
 /* Left Content */
@@ -45,55 +46,36 @@
   margin-bottom: 1.5rem;
 }
 
-/* Buttons */
+/* Base button style */
 .auth-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0.8rem 1.5rem;
   font-size: 1rem;
-  font-weight: 500;
   border-radius: 30px;
   cursor: pointer;
   width: 100%;
   max-width: 300px;
   height: 56px;
   margin-bottom: 1rem;
-  background-color: #ffffff;
-  color: #3c4043;
-  border: 1px solid #dadce0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  transition: all 0.3s ease;
+  font-weight: bold;
 }
 
-.auth-btn:hover {
-  background-color: #f7f8f8;
-  border-color: #c6c6c6;
+/* ✅ Updated style for the main Join Now button to match the theme */
+.join-now-btn {
+    background: linear-gradient(135deg, #B22222, #8B0000); /* Dark Red Gradient */
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(139, 0, 0, 0.3);
 }
 
-.auth-btn img {
-  width: 20px;
-  height: 20px;
-  margin-right: 10px;
+.join-now-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(139, 0, 0, 0.4);
 }
 
-
-/* Dark Mode for Email Link */
-.dark .email-btn-link {
-  background-color: #2f2f2f;
-  color: #f5f5f5;
-  border: 1px solid #444;
-}
-
-.dark .email-btn-link:hover {
-  background-color: #3b3b3b;
-}
-
-/* Text Blocks */
-.terms {
-  font-size: 0.8rem;
-  color: #6B7280;
-}
 
 .join-link {
   margin-top: 1rem;
@@ -114,166 +96,12 @@
   height: auto;
 }
 
-/* 🌙 Dark Mode */
+/* Dark Mode Styles */
 .dark {
   background-color: #181818;
   color: #f5f5f5;
 }
-
-.dark h1{ 
-  color: #9c1414;
-}
-.dark h2,
-.dark .home-subtitle,
-.dark .terms,
-.dark .join-link,
-.dark p {
-  color: #f5f5f5;
-}
-
-.dark a {
-  color: #A7C7E7;
-}
-
-.dark a:hover {
-  color: #fff;
-}
-
-.dark .google-btn {
-  background-color: #2c2c2c;
-  color: #f5f5f5;
-  border-color: #444;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
-}
-
-.dark .google-btn:hover {
-  background-color: #3a3a3a;
-  border-color: #555;
-}
-
-.dark .email-btn {
-  background-color: #2f2f2f;
-  color: #f5f5f5;
-  border: 1px solid #444;
-}
-
-.dark .email-btn:hover {
-  background-color: #3b3b3b;
-}
-
-.dark input {
-  background-color: #2a2a2a;
-  color: #ffffff;
-  border: 1px solid #555;
-}
-
-.dark input::placeholder {
-  color: #999;
-}
-
-* {
-  transition: background-color 0.1s, color 0.1s, border-color 0.1s;
-}
-
-/* Responsive Breakpoints */
-@media (max-width: 768px) {
-  .home-main {
-    flex-direction: column-reverse;
-    align-items: center;
-    text-align: center;
-  }
-
-  .main-left h1 {
-    font-size: 2rem;
-  }
-
-  .google-btn,
-  .email-btn {
-    width: 90%;
-  }
-
-  .home-animation {
-    max-width: 90%;
-  }
-}
-
-@media (max-width: 480px) {
-  .home-wrapper {
-    padding: 1rem;
-  }
-
-  .main-left h1 {
-    font-size: 1.6rem;
-  }
-
-  .terms,
-  .join-link {
-    font-size: 0.75rem;
-  }
-}
-
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6); /* dark transparent overlay */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal {
-  background: #fff;
-  padding: 2rem;
-  border-radius: 15px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-  text-align: center;
-  width: 90%;
-  max-width: 400px;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.modal h2 {
-  margin-bottom: 1rem;
-  color: #333;
-  font-size: 1.5rem;
-}
-
-.modal button {
-  margin: 0.5rem;
-  padding: 0.7rem 1.5rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: bold;
-  transition: 0.3s;
-}
-
-.modal button:nth-child(2) {
-  background-color: #4CAF50;
-  color: white;
-}
-
-.modal button:nth-child(3) {
-  background-color: #2196F3;
-  color: white;
-}
-
-.modal button:last-child {
-  background-color: #f44336;
-  color: white;
-}
-
-.modal button:hover {
-  opacity: 0.85;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
-}
+.dark h1 { color: #9c1414; }
+.dark .home-subtitle, .dark .join-link, .dark p { color: #f5f5f5; }
+.dark a { color: #A7C7E7; }
 

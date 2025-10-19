@@ -1,63 +1,77 @@
 import React, { useState } from 'react';
-import './Login.css';
-import { Eye, EyeOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import athleteGif from "../assets/illustrations/Athletics-bro.png";
+import './Login.css'; // Using a new CSS file for Login page
 
-function Login({ darkMode }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+const Login = ({ setUser }) => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log({ email, password });
-    alert("Login submitted!");
+  const handleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    try {
+      const decoded = jwtDecode(credentialResponse.credential);
+      const userRef = doc(db, "users", decoded.sub);
+      const docSnap = await getDoc(userRef);
+
+      if (docSnap.exists()) {
+        setUser(docSnap.data());
+        navigate('/feed');
+      } else {
+        navigate('/register', { state: { googleProfile: decoded } });
+      }
+    } catch (error) {
+      console.error("Error during sign-in:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleError = () => {
+    setLoading(false);
+    console.log('Login Failed');
   };
 
   return (
-    <div className={`login-container ${darkMode ? 'dark' : ''}`}>
-      <div className="login-card">
-        <h2 className="login-title">
-          Welcome Back to <span className="brand">Athlinko</span>
-        </h2>
-        <p className="subtitle">Log in and start connecting</p>
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <label>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            placeholder="you@example.com"
+    <div className="home-wrapper"> {/* Reusing home-wrapper for consistent background */}
+      <main className="home-main">
+        <div className="main-left-left"></div>
+        <div className="main-left">
+          <h1>Sign in to Athlinko</h1>
+          <p className="home-subtitle">
+            Continue your athletic journey with us.
+          </p>
+          <div className="google-auth-btn-container">
+            {loading ? <div className="loader"></div> : (
+              <GoogleLogin
+                onSuccess={handleSuccess}
+                onError={handleError}
+                theme="outline"
+                size="large"
+                shape="pill"
+                width="300px"
+              />
+            )}
+          </div>
+          <p className="terms">
+            By signing in, you agree to our policies.
+          </p>
+        </div>
+        <div className="main-right">
+          <img
+            src={athleteGif}
+            alt="Sport animation"
+            className="home-animation pulse-img"
           />
-
-          <label>Password</label>
-          <div className="password-field">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="Enter your password"
-            />
-            <span
-              className="toggle-eye"
-              onClick={() => setShowPassword(!showPassword)}
-              title={showPassword ? 'Hide password' : 'Show password'}
-            >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </span>
-          </div>
-
-          <div className="form-footer">
-            <a href="/forgot-password" className="forgot-link">Forgot Password?</a>
-          </div>
-
-          <button type="submit" className="login-button">Login</button>
-        </form>
-      </div>
+        </div>
+      </main>
     </div>
   );
-}
+};
 
 export default Login;
+

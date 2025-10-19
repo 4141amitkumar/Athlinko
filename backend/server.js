@@ -9,9 +9,6 @@ import postRoutes from "./routes/postRoutes.js";
 
 dotenv.config();
 
-// ✅ MongoDB connect (sirf ek jagah se)
-connectDB();
-
 const app = express();
 
 // Middleware
@@ -39,3 +36,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`🚀 Server running on port ${PORT}`)
 );
+

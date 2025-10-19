@@ -1,258 +1,358 @@
-/* Navbar container */
+/* --- Main Navbar Styles --- */
 .navbar {
+  background-color: #ffffff;
+  height: 70px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.1rem;
   position: sticky;
   top: 0;
-  background-color: #ffffff;
-  color: #333;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 10px 20px;
-  z-index: 1000;
-  transition: all 0.3s ease;
-}
-
-.navbar.dark {
-  background-color: #444;
-  color: #fff;
+  z-index: 999;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .navbar-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  height: 70px;
+  max-width: 1400px;
+  width: 100%;
+  padding: 0 24px;
+  overflow: visible; /* Dropdown ko cutne se bachata hai */
 }
 
-/* Logo */
+/* --- Logo and Title --- */
 .navbar-logo {
-  display: flex;
-  align-items: center;
-}
-
-.logo-img {
-  width: 140px;
-  height: auto;
-  object-fit: contain;
-}
-
-/* Center Links */
-.navbar-links {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-  align-items: center;
-  flex: 1;
-}
-
-.navbar-item {
+  color: #8B0000;
+  justify-self: start;
+  cursor: pointer;
   text-decoration: none;
-  color: inherit;
-  font-size: 16px;
-  font-weight: 700;
-  transition: color 0.3s ease;
+  font-size: 1.5rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
 }
 
-.navbar-item:hover {
-  color: #800000;
+/* --- Center Menu --- */
+.navbar-menu {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
 }
 
-/* Right Actions */
+.nav-item {
+  color: #333;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-item.active {
+  color: #8B0000;
+  background-color: #fce8e8;
+}
+
+.nav-item:hover {
+  background-color: #f0f2f5;
+  color: #8B0000;
+}
+
+/* --- Right Side Actions --- */
 .navbar-actions {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
+  overflow: visible; /* Suraksha ke liye */
 }
 
-/* Switch (Dark Mode) */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 34px;
-  height: 20px;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
+.action-btn {
+  background: none;
+  border: none;
   cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: 0.4s;
-  border-radius: 50px;
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 12px;
-  width: 12px;
-  border-radius: 50px;
-  left: 4px;
-  bottom: 4px;
-  background-color: white;
-  transition: 0.4s;
-}
-
-input:checked + .slider {
-  background-color: #1e90ff;
-}
-
-input:checked + .slider:before {
-  transform: translateX(14px);
-}
-
-/* Search */
-.search-container {
+  padding: 8px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  color: #333; /* Icon ka color saaf dikhane ke liye */
 }
 
-.search-box {
-  position: relative;
-  display: flex;
-  align-items: center;
+.action-btn:hover {
+  background-color: #f0f2f5;
 }
 
-.search-box input {
-  padding: 8px 12px 8px 36px;
-  border-radius: 24px;
-  border: 1px solid #ccc;
-  outline: none;
-  font-size: 14px;
-  width: 220px;
-  transition: 0.3s ease;
-  background-color: #fdfdfd;
-  color: #333;
-}
-
-.search-box input:focus {
-  border-color: #1976d2;
-  box-shadow: 0 0 5px rgba(25, 118, 210, 0.3);
-}
-
-/* Dark Mode Styles */
-.navbar.dark .search-box input {
-  background-color: #2a2a2a;
-  color: #f0f0f0;
-  border-color: #444;
-}
-
-.navbar.dark .search-box input:focus {
-  border-color: #90cdf4;
-  box-shadow: 0 0 5px rgba(144, 205, 244, 0.25);
-}
-
-/* Search Icon */
-.search-icon {
-  position: absolute;
-  left: 12px;
-  color: #777;
-  pointer-events: none;
-}
-
-.navbar.dark .search-icon {
-  color: #aaa;
-}
-
-/* Profile Dropdown */
+/* --- Profile Dropdown --- */
 .profile-container {
   position: relative;
-  cursor: pointer;
+  display: flex;
+  align-items: center;
 }
 
 .profile-pic {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 2px solid #ddd;
-  transition: transform 0.2s ease;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+  object-fit: cover;
+  vertical-align: middle; /* Alignment ke liye */
+  margin-top: 15px;
 }
 
 .profile-pic:hover {
-  transform: scale(1.05);
+  border-color: #8B0000;
 }
 
 .profile-dropdown {
   position: absolute;
-  top: 50px;
+  top: 60px;
   right: 0;
-  background-color: var(--dropdown-bg, #fff);
+  background-color: white;
   border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-  width: 230px;
-  padding: 15px;
-  z-index: 100;
-  animation: fadeIn 0.25s ease-in-out;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  width: 280px;
+  padding: 0.5rem;
+  animation: fadeIn 0.2s ease-in-out;
+  z-index: 1000;
 }
 
-.navbar.dark .profile-dropdown {
-  background-color: #2c2c2c;
-  color: #f0f0f0;
-  border: 1px solid #555;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .profile-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
+  padding: 0.75rem;
 }
 
 .dropdown-pic {
-  width: 48px;
-  height: 48px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   object-fit: cover;
+  margin-bottom: 50px;
 }
 
 .profile-name {
-  font-weight: bold;
-  margin: 0;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #050505;
 }
 
-.profile-email {
+.profile-role {
   font-size: 0.85rem;
-  color: gray;
-  margin: 0;
+  color: #fff; /* White text for visibility */
+  background: #1976d2; /* Blue background for contrast */
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin-top: 4px;
+  display: inline-block;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: capitalize;
+}
+
+.dropdown-actions {
+  padding: 0.25rem;
+}
+
+.dropdown-btn {
+  background: none;
+  border: none;
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: background-color 0.2s;
+  text-align: left;
+  color: #333;
+}
+
+.dropdown-btn:hover {
+  background-color: #f0f2f5;
 }
 
 .logout-btn {
+  color: #d93025;
+}
+
+.dropdown-divider {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 0.5rem 0;
+}
+
+/* --- Notification Bell & Dropdown Styles --- */
+.notification-container {
+  position: relative;
+}
+.notification-bell { 
+  position: relative; 
+  font-size: 2rem; /* Make bell icon bigger */
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
+  justify-content: center;
+}
+
+/* ✅ Notification badge ko theek kiya gaya */
+.notification-badge {
+  position: absolute;
+  top: 2px;      /* Slightly higher */
+  right: -4px;   /* Move badge further right */
+  background-color: #dc2626;
+  color: white;
+  border-radius: 50%;
+  width: 16px;    /* Smaller badge */
+  height: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.65rem; /* Slightly smaller font */
+  font-weight: bold;
+  border: 2px solid white;
+  z-index: 2;
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: 60px;
+  right: 0;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  width: 360px;
+  animation: fadeIn 0.2s ease-in-out;
+  z-index: 1000;
+  overflow: hidden;
+}
+.notification-header { padding: 1rem; font-weight: 600; border-bottom: 1px solid #f0f0f0; }
+.notification-list { max-height: 400px; overflow-y: auto; }
+.notification-item { display: flex; flex-direction: column; padding: 1rem; transition: background-color 0.2s; cursor: pointer; text-decoration: none; color: inherit; }
+.notification-item:hover { background-color: #f0f2f5; }
+.notification-item.empty { color: #666; cursor: default; }
+.notification-item.empty:hover { background-color: transparent; }
+.notification-title { font-weight: 600; color: #050505; }
+.notification-details { font-size: 0.85rem; color: #65676b; margin-top: 4px; }
+.notification-footer { display: block; text-align: center; padding: 1rem; font-weight: 600; color: #8B0000; text-decoration: none; border-top: 1px solid #f0f0f0; transition: background-color 0.2s; }
+.notification-footer:hover { background-color: #f0f2f5; }
+
+/* --- Auth Links (Logged out) --- */
+.auth-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.register-btn {
+  background-color: #8B0000;
+  color: white;
+}
+
+.register-btn:hover {
+  background-color: #B22222;
+  color: white;
+}
+
+/* --- Dark Mode --- */
+.navbar.dark { background-color: #1a1a1a; }
+.navbar.dark .navbar-logo, .navbar.dark .nav-item { color: #f5f5f5; }
+.navbar.dark .action-btn { color: #f5f5f5; }
+.navbar.dark .nav-item:hover, .navbar.dark .action-btn:hover { background-color: #2c2c2c; }
+.navbar.dark .nav-item.active { background-color: #3a0000; color: #fff; }
+.navbar.dark .profile-dropdown { background-color: #2c2c2c; }
+.navbar.dark .profile-header { border-bottom-color: #444; }
+.navbar.dark .profile-name, .navbar.dark .dropdown-btn { color: #f5f5f5; }
+.navbar.dark .profile-role { color: #fff; background: #1976d2; }
+.navbar.dark .dropdown-btn:hover { background-color: #3a3a3a; }
+.navbar.dark .dropdown-divider { border-top-color: #444; }
+.navbar.dark .notification-badge { border-color: #2c2c2c; }
+.navbar.dark .notification-dropdown { background-color: #2c2c2c; }
+.navbar.dark .notification-header, .navbar.dark .notification-footer { border-color: #444; }
+.navbar.dark .notification-item:hover, .navbar.dark .notification-footer:hover { background-color: #3a3a3a; }
+.navbar.dark .notification-title { color: #f5f5f5; }
+.navbar.dark .notification-details, .navbar.dark .notification-item.empty { color: #aaa; }
+/* --- Main Navbar Styles --- */
+/* --- Main Navbar Styles --- */
+.navbar {
+  background-color: #ffffff;
+  height: 70px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.1rem;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.navbar-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 70px;
+  max-width: 1400px;
   width: 100%;
-  padding: 10px 14px;
-  border: none;
-  border-radius: 8px;
-  background: #2c2c2c;
-  color: #e0e0e0;
-  font-weight: 500;
-  font-size: 14px;
+  padding: 0 24px;
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.action-btn, .profile-pic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-pic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: inset 0 0 0 1px #444;
+  object-fit: cover;
 }
 
-.logout-btn:hover {
-  background: #3a3a3a;
-  color: #999191;
-  box-shadow: inset 0 0 0 1px #666;
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.75rem;
 }
 
-.logout-icon {
-  width: 18px;
-  height: 18px;
-}
+/* ... Baaki saare styles waise hi rahenge ... */
+.navbar-logo { color: #8B0000; text-decoration: none; font-size: 1.5rem; font-weight: bold; }
+.navbar-menu { display: flex; align-items: center; gap: 2rem; }
+.nav-item { color: #333; text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.nav-item.active { color: #8B0000; background-color: #fce8e8; }
+.profile-container { position: relative; }
+.profile-dropdown { position: absolute; top: 60px; right: 0; background-color: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 280px; padding: 0.5rem; z-index: 1000; }
+.dropdown-pic { width: 50px; height: 50px; border-radius: 50%; }
+.dropdown-btn { background: none; border: none; width: 100%; padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 500; text-align: left; }
+.logout-btn { color: #d93025; }
+.dropdown-divider { border: none; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }
+.auth-links { display: flex; align-items: center; gap: 0.5rem; }
+.register-btn { background-color: #8B0000; color: white; }
 
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}

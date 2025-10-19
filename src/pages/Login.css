@@ -1,196 +1,84 @@
-/* Reset & Fonts */
-body {
-  margin: 0;
-  font-family: 'Poppins', sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-/* Container */
-.login-container {
+/* Using similar styles to Home.css for consistency */
+.google-auth-btn-container {
+  min-height: 56px;
   display: flex;
   justify-content: center;
   align-items: center;
+  margin-bottom: 1rem;
+}
+
+.loader {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Import or copy styles from Home.css that you want to reuse */
+.home-wrapper {
+  font-family: 'Segoe UI', sans-serif;
+  padding: 1rem 2rem;
+  color: #8B0000;
   min-height: 100vh;
-  padding: 2rem;
-  background: linear-gradient(135deg, #e0eafc, #cfdef3);
+  background: #f4f7fb;
 }
 
-/* Card */
-.login-card {
-  background: rgba(255, 255, 255, 0.9);
-  padding: 2.5rem;
-  border-radius: 18px;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15);
-  width: 100%;
-  max-width: 420px;
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
+.home-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+  min-height: calc(100vh - 100px);
 }
 
-/* Title */
-.login-title {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #1f3a93;
-  text-align: center;
+.main-left-left {
+  width: 100px;
 }
 
-.subtitle {
-  text-align: center;
-  font-size: 0.95rem;
-  margin-bottom: 1.8rem;
-  color: #555;
-}
-
-.brand {
-  color: #f64740;
-}
-
-/* Form */
-.login-form {
+.main-left {
+  max-width: 500px;
+  flex: 1;
   display: flex;
   flex-direction: column;
-}
-
-.login-form label {
-  font-weight: 500;
-  margin-bottom: 6px;
-  color: #333;
-}
-
-.login-form input {
-  padding: 0.75rem 1rem;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  margin-bottom: 1.2rem;
-  font-size: 1rem;
-  color: black;
-  background-color: #fdfdfd;
-  transition: 0.3s;
-}
-
-.login-form input:focus {
-  border-color: #1f3a93;
-  box-shadow: 0 0 0 3px rgba(31, 58, 147, 0.15);
-  outline: none;
-}
-
-/* Password eye */
-.password-field {
-  position: relative;
-  display: flex;
   align-items: center;
+  text-align: center;
 }
 
-.password-field input {
-  width: 100%;
-  padding-right: 40px;
+.main-left h1 {
+  font-size: 2.8rem;
+  margin-bottom: 2rem;
+  line-height: 1.2;
 }
 
-.toggle-eye {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: #666;
-}
-
-/* Footer Links */
-.form-footer {
-  text-align: right;
+.home-subtitle {
+  font-size: 1.1rem;
+  color: #4b5563;
   margin-bottom: 1.5rem;
 }
 
-.forgot-link {
-  font-size: 0.9rem;
-  color: #1f3a93;
-  text-decoration: none;
+.terms {
+  font-size: 0.8rem;
+  color: #6B7280;
 }
 
-.forgot-link:hover {
-  text-decoration: underline;
+.main-right {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
 }
 
-/* Button */
-.login-button {
-  padding: 0.75rem;
-  background-color: #1f3a93;
-  color: white;
-  border: none;
-  font-weight: 600;
-  font-size: 1rem;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+.home-animation {
+  max-width: 650px;
+  width: 100%;
+  height: auto;
 }
 
-.login-button:hover {
-  background-color: #16376b;
-  transform: translateY(-2px);
-}
-
-/* Responsive */
-@media (max-width: 480px) {
-  .login-card {
-    padding: 1.8rem;
-  }
-
-  .login-title {
-    font-size: 1.5rem;
-  }
-
-  .subtitle {
-    font-size: 0.9rem;
-  }
-}
-
-/* 🌙 Dark Mode */
-.dark {
-  background: linear-gradient(135deg, #1a1a1a, #0d0d0d);
-}
-
-.dark .login-card {
-  background: rgba(30, 30, 30, 0.95);
-  color: #e0e0e0;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.dark .login-title {
-  color: #90cdf4;
-}
-
-.dark .subtitle {
-  color: #aaa;
-}
-
-.dark .login-form label {
-  color: #ccc;
-}
-
-.dark .login-form input {
-  background-color: #2a2a2a;
-  color: #f0f0f0;
-  border-color: #444;
-}
-
-.dark .login-form input:focus {
-  border-color: #90cdf4;
-  box-shadow: 0 0 0 3px rgba(144, 205, 244, 0.25);
-}
-
-.dark .toggle-eye {
-  color: #aaa;
-}
-
-.dark .forgot-link {
-  color: #90cdf4;
-}
-
-.dark .login-button {
-  background-color: #3182ce;
-}
-
-.dark .login-button:hover {
-  background-color: #2563eb;
-}

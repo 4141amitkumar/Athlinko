@@ -1,112 +1,146 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Sun, Moon, LogOut, User as UserIcon, Bell, Trophy } from 'lucide-react';
+import { db } from '../firebase';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import './NavBar.css';
-import logo from '../assets/logo/logo.png';
 
-function NavBar({ darkMode, setDarkMode, user, setUser }) {
+const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
   const [showDropdown, setShowDropdown] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const dropdownRef = useRef(null);
+  const notificationRef = useRef(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const toggleDarkMode = () => setDarkMode(!darkMode);
+  // Effect to close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Effect to fetch active tournaments for the notification bell
+  useEffect(() => {
+    const fetchActiveTournaments = async () => {
+      if (!user) return;
+      try {
+        const now = new Date();
+        const q = query(
+          collection(db, "tournaments"), 
+          where("endDate", ">=", now),
+          orderBy("endDate", "asc")
+        );
+        const querySnapshot = await getDocs(q);
+        setNotifications(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error("Error fetching tournaments:", error);
+      }
+    };
+    fetchActiveTournaments();
+  }, [user]);
 
   const handleLogout = () => {
     setUser(null);
     setShowDropdown(false);
-    localStorage.removeItem('athlinkoUser'); // ✅ ensure session clear
+    localStorage.removeItem('athlinkoUser');
+    navigate('/');
   };
 
-  const handleSearch = () => {
-    if (searchQuery.trim() !== '') {
-      console.log('Searching for:', searchQuery);
-      // Future: Navigate to search results page
+  const handleViewProfile = () => {
+    if (user && user.sub) {
+      navigate(`/profile/${user.sub}`);
+      setShowDropdown(false);
     }
   };
 
   return (
     <nav className={`navbar ${darkMode ? 'dark' : ''}`}>
       <div className="navbar-container">
-        {/* Left: Logo */}
-        <div className="navbar-logo">
-          <img src={logo} alt="Athlinko Logo" className="logo-img" />
-        </div>
+        <Link to={user ? "/feed" : "/"} className="navbar-logo">Athlinko</Link>
+        
+        {user && (
+          <div className="navbar-menu">
+            <Link to="/feed" className={`nav-item ${location.pathname === '/feed' ? 'active' : ''}`}>Feed</Link>
+            <Link to="/search" className={`nav-item ${location.pathname.startsWith('/search') ? 'active' : ''}`}>Search</Link>
+            <Link to="/tournaments" className={`nav-item ${location.pathname.startsWith('/tournaments') ? 'active' : ''}`}>
+              <Trophy size={18} />
+              <span>Tournaments</span>
+            </Link>
+          </div>
+        )}
 
-        {/* Center: Navigation Links */}
-        <div className="navbar-links">
-          <Link className="navbar-item" to="/">Home</Link>
-          {!user && (
-            <>
-              <Link className="navbar-item" to="/login">Login</Link>
-              <Link className="navbar-item" to="/register">Register</Link>
-            </>
-          )}
-        </div>
-
-        {/* Right: Search + Dark Mode + Profile */}
         <div className="navbar-actions">
-          {user && (
-            <div className="search-container">
-              <div className="search-box">
-                <span className="search-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M10 2a8 8 0 105.293 14.293l5.707 5.707 1.414-1.414-5.707-5.707A8 8 0 0010 2zm0 2a6 6 0 110 12A6 6 0 0110 4z" />
-                  </svg>
-                </span>
-                <input
-                  type="text"
-                  placeholder="Search athletes, coaches, clubs..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                />
+          <button onClick={() => setDarkMode(!darkMode)} className="action-btn theme-toggle">
+            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+
+          {user ? (
+            <>
+              <div className="notification-container" ref={notificationRef}>
+                <button className="action-btn notification-bell" onClick={() => setShowNotifications(!showNotifications)}>
+                  <Bell size={22} />
+                  {notifications.length > 0 && <span className="notification-badge">{notifications.length}</span>}
+                </button>
+                {showNotifications && (
+                  <div className="notification-dropdown">
+                    <div className="notification-header"><h3>Active Tournaments</h3></div>
+                    <div className="notification-list">
+                      {notifications.length > 0 ? notifications.map(tourney => (
+                        <Link to="/tournaments" key={tourney.id} className="notification-item" onClick={() => setShowNotifications(false)}>
+                          <span className='notification-title'>{tourney.name}</span>
+                          <span className='notification-details'>{tourney.location}</span>
+                        </Link>
+                      )) : (
+                        <div className="notification-item empty"><span>No active tournaments.</span></div>
+                      )}
+                    </div>
+                    <Link to="/tournaments" className="notification-footer" onClick={() => setShowNotifications(false)}>View All Tournaments</Link>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
 
-          {/* Dark Mode Toggle */}
-          <label className="switch">
-            <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
-            <span className="slider"></span>
-          </label>
-
-          {/* Profile Dropdown */}
-          {user && (
-            <div className="profile-container" tabIndex={0}>
-              <img
-                src={user.picture}
-                alt="Profile"
-                className="profile-pic"
-                onClick={() => setShowDropdown(!showDropdown)}
-              />
-              {showDropdown && (
-                <div className="profile-dropdown">
-                  <div className="profile-header">
-                    <img src={user.picture} alt="User" className="dropdown-pic" />
-                    <div>
-                      <p className="profile-name">{user.name}</p>
-                      <p className="profile-email">{user.email}</p>
+              <div className="profile-container" ref={dropdownRef}>
+                <img src={user.picture} alt="Profile" className="profile-pic" onClick={() => setShowDropdown(!showDropdown)} />
+                {showDropdown && (
+                  <div className="profile-dropdown">
+                    <div className="profile-header">
+                      <img src={user.picture} alt="User" className="dropdown-pic" />
+                      <div className="profile-info">
+                        <p className="profile-name">{user.name}</p>
+                        <p className="profile-role">{user.role}</p>
+                      </div>
+                    </div>
+                    <div className="dropdown-actions">
+                      <button onClick={handleViewProfile} className="dropdown-btn"><UserIcon size={16} /><span>My Profile</span></button>
+                      <hr className="dropdown-divider" />
+                      <button onClick={handleLogout} className="dropdown-btn logout-btn"><LogOut size={16} /><span>Sign Out</span></button>
                     </div>
                   </div>
-                  <hr />
-                  <button onClick={handleLogout} className="logout-btn">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="logout-icon"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1" />
-                    </svg>
-                    Sign Out
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="auth-links">
+              <Link to="/login" className="nav-item">Login</Link>
+              <Link to="/register" className="nav-item register-btn">Register</Link>
             </div>
           )}
         </div>
       </div>
     </nav>
   );
-}
+};
 
 export default NavBar;
+

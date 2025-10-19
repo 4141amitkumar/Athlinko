@@ -1,0 +1,172 @@
+.profile-page-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  overflow: hidden; 
+}
+
+.profile-header-banner {
+  height: 200px;
+  background: linear-gradient(135deg, #B22222, #8B0000);
+  position: relative;
+}
+
+.edit-profile-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+.edit-profile-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.profile-avatar-wrapper {
+  position: absolute;
+  bottom: -75px; 
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.profile-main-avatar {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 5px solid white;
+  background-color: #eee;
+  object-fit: cover;
+}
+
+.change-photo-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.upload-spinner {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 50%; border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid white; animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* --- View Mode Styles --- */
+.profile-view {
+  padding-bottom: 2rem;
+}
+.profile-details {
+  padding: 100px 2rem 2rem 2rem; 
+  text-align: center;
+  border-bottom: 1px solid #f0f0f0;
+}
+.profile-details h1 { font-size: 2.2rem; margin: 0; color: #1c1e21; }
+.profile-meta { display: flex; justify-content: center; gap: 1rem; color: #65676B; margin-top: 0.5rem; flex-wrap: wrap; }
+.profile-role { font-size: 1rem; color: #fff; padding: 4px 15px; border-radius: 15px; text-transform: capitalize; display: inline-block; }
+.profile-role.player { background-color: #007bff; }
+.profile-role.coach { background-color: #28a745; }
+
+.profile-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+.info-item {
+  background-color: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+.info-item.full-width {
+  grid-column: 1 / -1;
+}
+.info-item h3 {
+  margin: 0 0 0.5rem 0;
+  color: #8B0000;
+  font-size: 1rem;
+}
+.info-item p {
+  margin: 0;
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* --- Edit Mode Styles --- */
+.profile-edit-form {
+  padding: 2rem;
+}
+.profile-edit-form h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #333;
+}
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.form-group { display: flex; flex-direction: column; }
+.form-group.full-width { grid-column: 1 / -1; }
+.form-group label { font-weight: 600; margin-bottom: 8px; color: #333; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px;
+  border: 1px solid #ccc; transition: border-color 0.2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none; border-color: #8B0000;
+}
+.form-group textarea { min-height: 100px; resize: vertical; }
+.edit-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; }
+.cancel-btn, .save-btn { border: none; padding: 12px 24px; font-size: 1rem; font-weight: 600; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; }
+.cancel-btn { background-color: #f0f2f5; color: #333; }
+.cancel-btn:hover { background-color: #e2e6ea; }
+.save-btn { background-color: #8B0000; color: white; }
+.save-btn:hover { background-color: #B22222; }
+/* ... All original styles ... */
+
+/* --- Dark Mode --- */
+.dark .profile-page-container, .dark .edit-profile-container {
+  background-color: #242526;
+}
+.dark .profile-details h1, .dark .info-item h3, .dark .profile-edit-form h1, .dark .form-group label {
+  color: #e4e6eb;
+}
+.dark .profile-meta, .dark .info-item p {
+  color: #b0b3b8;
+}
+.dark .info-item {
+  background-color: #3a3b3c;
+}
+.dark .profile-edit-form input, .dark .edit-profile-form select, .dark .edit-profile-form textarea {
+    background-color: #3a3b3c;
+    border-color: #555;
+    color: #e4e6eb;
+}
+.dark .cancel-btn {
+  background-color: #3a3b3c;
+  color: #e4e6eb;
+}
+.dark .cancel-btn:hover {
+  background-color: #555;
+}
+
+
