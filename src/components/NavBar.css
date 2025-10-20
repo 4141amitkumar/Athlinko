@@ -20,7 +20,7 @@
   max-width: 1400px;
   width: 100%;
   padding: 0 24px;
-  overflow: visible; /* Dropdown ko cutne se bachata hai */
+  overflow: visible; /* Important for dropdowns */
 }
 
 /* --- Logo and Title --- */
@@ -69,7 +69,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  overflow: visible; /* Suraksha ke liye */
+  overflow: visible;
 }
 
 .action-btn {
@@ -82,7 +82,7 @@
   align-items: center;
   justify-content: center;
   transition: background-color 0.2s ease;
-  color: #333; /* Icon ka color saaf dikhane ke liye */
+  color: #333;
 }
 
 .action-btn:hover {
@@ -104,8 +104,7 @@
   border: 2px solid transparent;
   transition: border-color 0.2s;
   object-fit: cover;
-  vertical-align: middle; /* Alignment ke liye */
-  margin-top: 15px;
+  vertical-align: middle;
 }
 
 .profile-pic:hover {
@@ -142,19 +141,24 @@
   height: 50px;
   border-radius: 50%;
   object-fit: cover;
-  margin-bottom: 50px;
+}
+
+.profile-info {
+    display: flex;
+    flex-direction: column;
 }
 
 .profile-name {
   font-weight: 600;
   font-size: 1rem;
   color: #050505;
+  margin: 0;
 }
 
 .profile-role {
   font-size: 0.85rem;
-  color: #fff; /* White text for visibility */
-  background: #1976d2; /* Blue background for contrast */
+  color: #fff;
+  background: #1976d2;
   border-radius: 6px;
   padding: 2px 8px;
   margin-top: 4px;
@@ -203,9 +207,9 @@
 .notification-container {
   position: relative;
 }
-.notification-bell { 
-  position: relative; 
-  font-size: 2rem; /* Make bell icon bigger */
+.notification-bell {
+  position: relative;
+  font-size: 2rem;
   width: 36px;
   height: 36px;
   display: flex;
@@ -213,20 +217,20 @@
   justify-content: center;
 }
 
-/* ✅ Notification badge ko theek kiya gaya */
 .notification-badge {
   position: absolute;
-  top: 2px;      /* Slightly higher */
-  right: -4px;   /* Move badge further right */
+  top: 2px;
+  right: -4px;
   background-color: #dc2626;
   color: white;
   border-radius: 50%;
-  width: 16px;    /* Smaller badge */
+  min-width: 16px;
   height: 16px;
+  padding: 0 4px;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 0.65rem; /* Slightly smaller font */
+  font-size: 0.65rem;
   font-weight: bold;
   border: 2px solid white;
   z-index: 2;
@@ -274,14 +278,12 @@
 
 /* --- Dark Mode --- */
 .navbar.dark { background-color: #1a1a1a; }
-.navbar.dark .navbar-logo, .navbar.dark .nav-item { color: #f5f5f5; }
-.navbar.dark .action-btn { color: #f5f5f5; }
+.navbar.dark .navbar-logo, .navbar.dark .nav-item, .navbar.dark .action-btn { color: #f5f5f5; }
 .navbar.dark .nav-item:hover, .navbar.dark .action-btn:hover { background-color: #2c2c2c; }
 .navbar.dark .nav-item.active { background-color: #3a0000; color: #fff; }
 .navbar.dark .profile-dropdown { background-color: #2c2c2c; }
 .navbar.dark .profile-header { border-bottom-color: #444; }
 .navbar.dark .profile-name, .navbar.dark .dropdown-btn { color: #f5f5f5; }
-.navbar.dark .profile-role { color: #fff; background: #1976d2; }
 .navbar.dark .dropdown-btn:hover { background-color: #3a3a3a; }
 .navbar.dark .dropdown-divider { border-top-color: #444; }
 .navbar.dark .notification-badge { border-color: #2c2c2c; }
@@ -290,69 +292,3 @@
 .navbar.dark .notification-item:hover, .navbar.dark .notification-footer:hover { background-color: #3a3a3a; }
 .navbar.dark .notification-title { color: #f5f5f5; }
 .navbar.dark .notification-details, .navbar.dark .notification-item.empty { color: #aaa; }
-/* --- Main Navbar Styles --- */
-/* --- Main Navbar Styles --- */
-.navbar {
-  background-color: #ffffff;
-  height: 70px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 1.1rem;
-  position: sticky;
-  top: 0;
-  z-index: 999;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.navbar-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 70px;
-  max-width: 1400px;
-  width: 100%;
-  padding: 0 24px;
-}
-
-.navbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.action-btn, .profile-pic {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.profile-pic {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  cursor: pointer;
-  object-fit: cover;
-}
-
-.profile-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0.75rem;
-}
-
-/* ... Baaki saare styles waise hi rahenge ... */
-.navbar-logo { color: #8B0000; text-decoration: none; font-size: 1.5rem; font-weight: bold; }
-.navbar-menu { display: flex; align-items: center; gap: 2rem; }
-.nav-item { color: #333; text-decoration: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
-.nav-item.active { color: #8B0000; background-color: #fce8e8; }
-.profile-container { position: relative; }
-.profile-dropdown { position: absolute; top: 60px; right: 0; background-color: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 280px; padding: 0.5rem; z-index: 1000; }
-.dropdown-pic { width: 50px; height: 50px; border-radius: 50%; }
-.dropdown-btn { background: none; border: none; width: 100%; padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 500; text-align: left; }
-.logout-btn { color: #d93025; }
-.dropdown-divider { border: none; border-top: 1px solid #e0e0e0; margin: 0.5rem 0; }
-.auth-links { display: flex; align-items: center; gap: 0.5rem; }
-.register-btn { background-color: #8B0000; color: white; }
-

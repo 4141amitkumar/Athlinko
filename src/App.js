@@ -9,13 +9,19 @@ import Search from './pages/Search';
 import Profile from './pages/Profile';
 import Tournaments from './pages/Tournaments';
 import EditProfile from './pages/EditProfile';
+import Requests from './pages/Requests';
+import Messages from './pages/Messages'; // Import the new Messages page
 import './App.css';
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('athlinkoUser');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('athlinkoUser');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (error) {
+      return null;
+    }
   });
 
   useEffect(() => {
@@ -24,7 +30,8 @@ function App() {
     } else {
       localStorage.removeItem('athlinkoUser');
     }
-  }, [user]);
+    document.body.className = darkMode ? 'dark' : '';
+  }, [user, darkMode]);
 
   return (
     <div className={darkMode ? 'dark' : ''}>
@@ -43,7 +50,6 @@ function App() {
           <Route path="/feed" element={user ? <Feed user={user} /> : <Navigate to="/login" replace />} />
           <Route path="/search" element={user ? <Search /> : <Navigate to="/login" replace />} />
           
-          {/* ✅ Yahan `setUser` ko pass kiya gaya hai */}
           <Route 
             path="/profile/:userId" 
             element={user ? <Profile currentUser={user} setUser={setUser} /> : <Navigate to="/login" replace />} 
@@ -53,6 +59,19 @@ function App() {
           <Route 
             path="/edit-profile" 
             element={user ? <EditProfile currentUser={user} setUser={setUser} /> : <Navigate to="/login" replace />} 
+          />
+          <Route
+            path="/requests"
+            element={user ? <Requests currentUser={user} /> : <Navigate to="/login" replace />}
+          />
+          {/* Add new routes for messaging */}
+          <Route
+            path="/messages"
+            element={user ? <Messages currentUser={user} /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/messages/:conversationId"
+            element={user ? <Messages currentUser={user} /> : <Navigate to="/login" replace />}
           />
         </Routes>
       </Router>

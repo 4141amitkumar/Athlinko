@@ -1,0 +1,206 @@
+.messages-page-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    height: calc(100vh - 70px - 4rem); /* Full height minus navbar and margin */
+    padding: 0 1rem;
+}
+
+.messages-layout {
+    display: flex;
+    height: 100%;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.conversations-list {
+    width: 350px;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.conversations-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+.conversations-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.conversation-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid #f0f0f0;
+}
+.conversation-item:hover {
+    background-color: #f5f5f5;
+}
+.conversation-item.active {
+    background-color: #fce8e8;
+}
+.conversation-item.unread .conversation-name {
+    font-weight: 900;
+}
+.conversation-item.unread .conversation-last-message {
+    color: #050505;
+    font-weight: 600;
+}
+
+.conversation-item img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.conversation-info {
+    overflow: hidden;
+}
+.conversation-name {
+    font-weight: 600;
+    display: block;
+}
+.conversation-last-message {
+    font-size: 0.9rem;
+    color: #65676b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-window {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+.chat-header img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.chat-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.messages-area {
+    flex-grow: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.message-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.message-bubble {
+    padding: 10px 15px;
+    border-radius: 20px;
+    max-width: 70%;
+    word-wrap: break-word;
+}
+.message-bubble p {
+    margin: 0;
+}
+
+.message-timestamp {
+    font-size: 0.7rem;
+    color: #999;
+    margin: 2px 10px 8px;
+}
+
+.message-wrapper.sent {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+.message-wrapper.received {
+    align-self: flex-start;
+    align-items: flex-start;
+}
+
+.message-bubble.sent {
+    background-color: #8B0000;
+    color: white;
+    border-bottom-right-radius: 5px;
+}
+
+.message-bubble.received {
+    background-color: #f0f2f5;
+    color: #333;
+    border-bottom-left-radius: 5px;
+}
+
+.message-input-form {
+    display: flex;
+    padding: 1rem;
+    border-top: 1px solid #e0e0e0;
+}
+.message-input-form input {
+    flex-grow: 1;
+    border: none;
+    background-color: #f0f2f5;
+    border-radius: 20px;
+    padding: 12px 20px;
+    font-size: 1rem;
+}
+.message-input-form input:focus {
+    outline: none;
+}
+.message-input-form button {
+    background: none;
+    border: none;
+    padding: 0 1rem;
+    color: #8B0000;
+    cursor: pointer;
+}
+
+.no-chat-selected {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #65676b;
+    font-size: 1.2rem;
+}
+.no-chat-selected svg {
+    width: 60px;
+    height: 60px;
+    color: #ccc;
+    margin-bottom: 1rem;
+}
+
+/* Dark Mode */
+.dark .messages-layout { background-color: #1a1a1a; }
+.dark .conversations-list, .dark .chat-header, .dark .message-input-form, .dark .conversation-item { border-color: #3a3b3c; }
+.dark .conversations-header h2, .dark .chat-header h3, .dark .conversation-name { color: #e4e6eb; }
+.dark .conversation-item:hover { background-color: #2c2c2c; }
+.dark .conversation-item.active { background-color: #3a0000; }
+.dark .conversation-last-message { color: #b0b3b8; }
+.dark .conversation-item.unread .conversation-last-message { color: #e4e6eb; }
+.dark .message-bubble.received { background-color: #3a3b3c; color: #e4e6eb; }
+.dark .message-input-form input { background-color: #3a3b3c; color: #e4e6eb; }
+.dark .no-chat-selected { color: #b0b3b8; }
+.dark .message-timestamp { color: #777; }
+

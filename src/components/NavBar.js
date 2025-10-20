@@ -1,53 +1,81 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Sun, Moon, LogOut, User as UserIcon, Bell, Trophy } from 'lucide-react';
+import { Sun, Moon, LogOut, User as UserIcon, Bell, Trophy, Users, MessageSquare } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, orderBy, doc, updateDoc, serverTimestamp, writeBatch, arrayUnion } from 'firebase/firestore';
+import RequestsDropdown from './RequestsDropdown';
 import './NavBar.css';
 
 const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showRequests, setShowRequests] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [connectionRequests, setConnectionRequests] = useState([]);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
+  const requestsRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Effect to close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowDropdown(false);
-      }
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setShowNotifications(false);
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setShowDropdown(false);
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) setShowNotifications(false);
+      if (requestsRef.current && !requestsRef.current.contains(event.target)) setShowRequests(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Effect to fetch active tournaments for the notification bell
   useEffect(() => {
+    if (!user) {
+      setNotifications([]);
+      setConnectionRequests([]);
+      setUnreadMessagesCount(0);
+      return;
+    }
+
+    // Fetch active tournaments
     const fetchActiveTournaments = async () => {
-      if (!user) return;
       try {
         const now = new Date();
-        const q = query(
-          collection(db, "tournaments"), 
-          where("endDate", ">=", now),
-          orderBy("endDate", "asc")
-        );
+        const q = query(collection(db, "tournaments"), where("endDate", ">=", now), orderBy("endDate", "asc"));
         const querySnapshot = await getDocs(q);
         setNotifications(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (error) {
-        console.error("Error fetching tournaments:", error);
-      }
+      } catch (error) { console.error("Error fetching tournaments:", error); }
     };
+
+    // Listen for incoming connection requests
+    const requestsQuery = query(collection(db, 'requests'), where('receiverId', '==', user.sub), where('status', '==', 'pending'));
+    const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
+      setConnectionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    // Listen for unread messages
+    const convosQuery = query(collection(db, 'conversations'), where('participants', 'array-contains', user.sub));
+    const unsubscribeConversations = onSnapshot(convosQuery, (snapshot) => {
+      let unreadCount = 0;
+      snapshot.forEach(doc => {
+        const convo = doc.data();
+        const lastRead = convo.participantInfo[user.sub]?.lastRead?.toDate();
+        const lastMessageTime = convo.lastMessageTimestamp?.toDate();
+        if (lastRead && lastMessageTime && lastMessageTime > lastRead) {
+          unreadCount++;
+        } else if (!lastRead && convo.lastMessage) { // Handle case where lastRead is not set yet
+          unreadCount++;
+        }
+      });
+      setUnreadMessagesCount(unreadCount);
+    });
+
     fetchActiveTournaments();
+
+    return () => {
+      unsubscribeRequests();
+      unsubscribeConversations();
+    };
   }, [user]);
 
   const handleLogout = () => {
@@ -56,12 +84,32 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
     localStorage.removeItem('athlinkoUser');
     navigate('/');
   };
-
+  
   const handleViewProfile = () => {
-    if (user && user.sub) {
-      navigate(`/profile/${user.sub}`);
-      setShowDropdown(false);
-    }
+      if (user && user.sub) {
+          navigate(`/profile/${user.sub}`);
+          setShowDropdown(false);
+      }
+  };
+
+  const handleAcceptRequest = async (request) => {
+      const batch = writeBatch(db);
+      const requestRef = doc(db, 'requests', request.id);
+      batch.update(requestRef, { status: 'accepted', updatedAt: serverTimestamp() });
+      const currentUserRef = doc(db, 'users', request.receiverId);
+      batch.update(currentUserRef, { connections: arrayUnion(request.senderId) });
+      const senderUserRef = doc(db, 'users', request.senderId);
+      batch.update(senderUserRef, { connections: arrayUnion(request.receiverId) });
+      try {
+          await batch.commit();
+      } catch (error) { console.error("Error accepting request:", error); }
+  };
+
+  const handleRejectRequest = async (requestId) => {
+      const requestRef = doc(db, 'requests', requestId);
+      try {
+          await updateDoc(requestRef, { status: 'rejected', updatedAt: serverTimestamp() });
+      } catch (error) { console.error("Error rejecting request:", error); }
   };
 
   return (
@@ -74,8 +122,7 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
             <Link to="/feed" className={`nav-item ${location.pathname === '/feed' ? 'active' : ''}`}>Feed</Link>
             <Link to="/search" className={`nav-item ${location.pathname.startsWith('/search') ? 'active' : ''}`}>Search</Link>
             <Link to="/tournaments" className={`nav-item ${location.pathname.startsWith('/tournaments') ? 'active' : ''}`}>
-              <Trophy size={18} />
-              <span>Tournaments</span>
+              <Trophy size={18} /><span>Tournaments</span>
             </Link>
           </div>
         )}
@@ -87,6 +134,18 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
 
           {user ? (
             <>
+              <Link to="/messages" className="action-btn notification-bell">
+                <MessageSquare size={22} />
+                {unreadMessagesCount > 0 && <span className="notification-badge">{unreadMessagesCount}</span>}
+              </Link>
+              <div className="notification-container" ref={requestsRef}>
+                <button className="action-btn notification-bell" onClick={() => setShowRequests(!showRequests)}>
+                  <Users size={22} />
+                  {connectionRequests.length > 0 && <span className="notification-badge">{connectionRequests.length}</span>}
+                </button>
+                {showRequests && <RequestsDropdown requests={connectionRequests} onAccept={handleAcceptRequest} onReject={handleRejectRequest} />}
+              </div>
+
               <div className="notification-container" ref={notificationRef}>
                 <button className="action-btn notification-bell" onClick={() => setShowNotifications(!showNotifications)}>
                   <Bell size={22} />
@@ -101,9 +160,7 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
                           <span className='notification-title'>{tourney.name}</span>
                           <span className='notification-details'>{tourney.location}</span>
                         </Link>
-                      )) : (
-                        <div className="notification-item empty"><span>No active tournaments.</span></div>
-                      )}
+                      )) : (<div className="notification-item empty"><span>No active tournaments.</span></div>)}
                     </div>
                     <Link to="/tournaments" className="notification-footer" onClick={() => setShowNotifications(false)}>View All Tournaments</Link>
                   </div>
