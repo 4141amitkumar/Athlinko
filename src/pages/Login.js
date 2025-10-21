@@ -19,9 +19,13 @@ const Login = ({ setUser }) => {
       const docSnap = await getDoc(userRef);
 
       if (docSnap.exists()) {
-        setUser(docSnap.data());
+        // **FIX:** Combine the document ID (sub) with the rest of the user data
+        // This ensures the `currentUser.sub` property exists for profile checks.
+        const userData = { sub: docSnap.id, ...docSnap.data() };
+        setUser(userData);
         navigate('/feed');
       } else {
+        // User is new, navigate to registration page with their Google profile
         navigate('/register', { state: { googleProfile: decoded } });
       }
     } catch (error) {
@@ -74,4 +78,3 @@ const Login = ({ setUser }) => {
 };
 
 export default Login;
-

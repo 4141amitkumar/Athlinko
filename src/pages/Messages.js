@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db } from '../firebase';
-import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { Send, MessageSquareText } from 'lucide-react';
+import { db, rtdb } from '../firebase'; // RTDB import karein
+import { ref, onValue } from 'firebase/database'; // RTDB functions import karein
+import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, doc, getDoc, updateDoc, writeBatch, getDocs } from 'firebase/firestore'; // getDocs yahan add karein
+import { Send, MessageSquareText, Check, CheckCheck } from 'lucide-react';
 import './Messages.css';
 
 const formatMessageTimestamp = (timestamp) => {
@@ -22,8 +23,10 @@ const Messages = ({ currentUser }) => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
+    const [otherUserStatus, setOtherUserStatus] = useState({ state: 'offline' });
     const messagesEndRef = useRef(null);
 
+    // Conversations list fetch karein
     useEffect(() => {
         if (!currentUser) return;
         setLoading(true);
@@ -41,20 +44,14 @@ const Messages = ({ currentUser }) => {
 
         return () => unsubscribe();
     }, [currentUser]);
-
+    
+    // Active chat aur messages handle karein
     useEffect(() => {
-        if (!conversationId) {
+        if (!conversationId || !currentUser) {
             setActiveConversation(null);
             setMessages([]);
             return;
         }
-
-        const markAsRead = async () => {
-            const convoRef = doc(db, 'conversations', conversationId);
-            await updateDoc(convoRef, {
-                [`participantInfo.${currentUser.sub}.lastRead`]: serverTimestamp()
-            });
-        };
 
         const getConvoData = async () => {
             const convoRef = doc(db, 'conversations', conversationId);
@@ -62,21 +59,54 @@ const Messages = ({ currentUser }) => {
             if (convoSnap.exists()) {
                 const convoData = convoSnap.data();
                 const otherUserId = convoData.participants.find(p => p !== currentUser.sub);
-                setActiveConversation({ id: conversationId, ...convoData.participantInfo[otherUserId] });
+                
+                if (otherUserId) {
+                    setActiveConversation({ id: conversationId, otherUserId, ...convoData.participantInfo[otherUserId] });
+                }
             }
         };
         
         getConvoData();
-        markAsRead();
 
+        // Messages ke liye listener
         const messagesQuery = query(collection(db, 'conversations', conversationId, 'messages'), orderBy('timestamp', 'asc'));
-        const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+        const unsubscribeMessages = onSnapshot(messagesQuery, async (snapshot) => {
             const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setMessages(msgs);
+
+            // Messages ko 'seen' mark karein (Client-side logic)
+            const batch = writeBatch(db);
+            let updatesMade = false;
+            snapshot.forEach(document => {
+                const message = document.data();
+                if (message.senderId !== currentUser.sub && message.status !== 'seen') {
+                    const messageRef = doc(db, 'conversations', conversationId, 'messages', document.id);
+                    batch.update(messageRef, { status: 'seen' });
+                    updatesMade = true;
+                }
+            });
+
+            if (updatesMade) {
+                await batch.commit();
+            }
         });
 
-        return () => unsubscribe();
-    }, [conversationId, currentUser.sub]);
+        return () => unsubscribeMessages();
+    }, [conversationId, currentUser]);
+
+    // Other user ke online status ke liye listener
+    useEffect(() => {
+        if (activeConversation?.otherUserId) {
+            const statusRef = ref(rtdb, `/status/${activeConversation.otherUserId}`);
+            const unsubscribeStatus = onValue(statusRef, (snapshot) => {
+                const status = snapshot.val();
+                setOtherUserStatus(status || { state: 'offline' });
+            });
+
+            return () => unsubscribeStatus();
+        }
+    }, [activeConversation]);
+
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -93,6 +123,7 @@ const Messages = ({ currentUser }) => {
             senderId: currentUser.sub,
             text: newMessage,
             timestamp: serverTimestamp(),
+            status: 'sent' // Initial status
         });
 
         await updateDoc(convoRef, {
@@ -103,17 +134,30 @@ const Messages = ({ currentUser }) => {
 
         setNewMessage('');
     };
-
+    
     const getOtherParticipant = (convo) => {
         const otherUserId = convo.participants.find(p => p !== currentUser.sub);
         return convo.participantInfo[otherUserId];
+    };
+    
+    // Status ticks render karne ke liye function
+    const renderMessageStatus = (msg) => {
+        if (msg.senderId !== currentUser.sub) return null;
+        if (msg.status === 'seen') {
+            return <CheckCheck size={16} className="status-icon seen" />;
+        }
+        if (msg.status === 'sent' || msg.status === 'delivered') {
+            return <Check size={16} className="status-icon" />;
+        }
+        return null;
     };
 
     return (
         <div className="messages-page-container">
             <div className="messages-layout">
                 <div className="conversations-list">
-                    <div className="conversations-header">
+                    {/* ... conversations list JSX ... */}
+                     <div className="conversations-header">
                         <h2>Inbox</h2>
                     </div>
                     {loading ? <p style={{textAlign: 'center', padding: '1rem'}}>Loading conversations...</p> : conversations.map(convo => {
@@ -143,7 +187,13 @@ const Messages = ({ currentUser }) => {
                         <>
                             <div className="chat-header">
                                 <img src={activeConversation.picture} alt={activeConversation.name} />
-                                <h3>{activeConversation.name}</h3>
+                                <div className="chat-header-info">
+                                  <h3>{activeConversation.name}</h3>
+                                  <div className="chat-status">
+                                      <span className={`status-dot ${otherUserStatus.state}`}></span>
+                                      <span>{otherUserStatus.state}</span>
+                                  </div>
+                                </div>
                             </div>
                             <div className="messages-area">
                                 {messages.map(msg => (
@@ -151,7 +201,10 @@ const Messages = ({ currentUser }) => {
                                         <div className="message-bubble">
                                             <p>{msg.text}</p>
                                         </div>
-                                        <span className="message-timestamp">{formatMessageTimestamp(msg.timestamp)}</span>
+                                        <span className="message-timestamp">
+                                            {formatMessageTimestamp(msg.timestamp)}
+                                            {renderMessageStatus(msg)}
+                                        </span>
                                     </div>
                                 ))}
                                 <div ref={messagesEndRef} />

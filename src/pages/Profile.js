@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { db, storage } from '../firebase';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Camera, Edit3, UserPlus, UserCheck, Clock, UserX, MessageSquare } from 'lucide-react';
 import './Profile.css';
@@ -25,74 +25,65 @@ const Profile = ({ currentUser, setUser }) => {
   const [profileUser, setProfileUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
-  // 'connectionStatus' no longer includes 'own_profile'
-  const [connectionStatus, setConnectionStatus] = useState('loading'); // 'loading', 'not_connected', 'pending_sent', 'pending_received', 'connected'
+  const [connectionStatus, setConnectionStatus] = useState('loading');
   const [requestDocId, setRequestDocId] = useState(null);
   const fileInputRef = useRef(null);
-
-  // This boolean is the single source of truth for identifying the owner's view.
-  const isOwnProfile = currentUser && currentUser.sub === userId;
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
 
   useEffect(() => {
     if (!userId) {
-        setLoading(false);
-        return;
-    };
+      setLoading(false);
+      return;
+    }
+
+    const ownProfileCheck = currentUser && currentUser.sub === userId;
+    setIsOwnProfile(ownProfileCheck);
     
-    const fetchUserAndConnection = async () => {
-      setLoading(true);
-      try {
-        const userDocRef = doc(db, 'users', userId);
-        const docSnap = await getDoc(userDocRef);
-
-        if (!docSnap.exists()) {
-          console.log("No such user!");
-          setProfileUser(null);
-          setLoading(false);
-          return;
-        }
-
+    // Real-time listener for the profile user's data
+    const unsubProfileUser = onSnapshot(doc(db, 'users', userId), (docSnap) => {
+      if (docSnap.exists()) {
         const userData = { id: docSnap.id, ...docSnap.data() };
         setProfileUser(userData);
 
-        // If it's the user's own profile, we don't need to check connection status.
-        if (isOwnProfile) {
-          // No need to set connectionStatus for own profile
-        } else if (currentUser) {
-          // If not own profile, check connection status.
-          if (userData.connections?.includes(currentUser.sub)) {
-            setConnectionStatus('connected');
-          } else {
-            const q1 = query(collection(db, 'requests'), where('senderId', '==', currentUser.sub), where('receiverId', '==', userId), where('status', '==', 'pending'));
-            const sentSnap = await getDocs(q1);
-
-            if (!sentSnap.empty) {
-              setConnectionStatus('pending_sent');
-              setRequestDocId(sentSnap.docs[0].id);
+        // Fetch connection status if it's not the user's own profile
+        if (!ownProfileCheck && currentUser) {
+            if (userData.connections?.includes(currentUser.sub)) {
+                setConnectionStatus('connected');
             } else {
-              const q2 = query(collection(db, 'requests'), where('senderId', '==', userId), where('receiverId', '==', currentUser.sub), where('status', '==', 'pending'));
-              const receivedSnap = await getDocs(q2);
-              if (!receivedSnap.empty) {
-                setConnectionStatus('pending_received');
-                setRequestDocId(receivedSnap.docs[0].id);
-              } else {
-                setConnectionStatus('not_connected');
-              }
+                // Check for pending requests
+                const q1 = query(collection(db, 'requests'), where('senderId', '==', currentUser.sub), where('receiverId', '==', userId), where('status', '==', 'pending'));
+                getDocs(q1).then(sentSnap => {
+                    if (!sentSnap.empty) {
+                        setConnectionStatus('pending_sent');
+                        setRequestDocId(sentSnap.docs[0].id);
+                    } else {
+                        const q2 = query(collection(db, 'requests'), where('senderId', '==', userId), where('receiverId', '==', currentUser.sub), where('status', '==', 'pending'));
+                        getDocs(q2).then(receivedSnap => {
+                            if (!receivedSnap.empty) {
+                                setConnectionStatus('pending_received');
+                                setRequestDocId(receivedSnap.docs[0].id);
+                            } else {
+                                setConnectionStatus('not_connected');
+                            }
+                        });
+                    }
+                });
             }
-          }
-        } else {
-            // Case for when viewing a profile while not logged in
-            setConnectionStatus('not_connected');
         }
-      } catch (error) {
-        console.error("Error fetching user or connection status:", error);
-      } finally {
-        setLoading(false);
+      } else {
+        console.log("No such user!");
+        setProfileUser(null);
       }
-    };
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching user data:", error);
+      setLoading(false);
+    });
 
-    fetchUserAndConnection();
-  }, [userId, currentUser, isOwnProfile]); // isOwnProfile added to dependency array
+    return () => {
+      unsubProfileUser();
+    };
+  }, [userId, currentUser]);
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -105,9 +96,8 @@ const Profile = ({ currentUser, setUser }) => {
         const userDocRef = doc(db, 'users', userId);
         await updateDoc(userDocRef, { picture: newImageUrl });
         
-        const updatedUser = { ...currentUser, picture: newImageUrl };
-        setUser(updatedUser);
-        setProfileUser(prev => ({...prev, picture: newImageUrl}));
+        // Update user state in App.js as well
+        setUser(prevUser => ({ ...prevUser, picture: newImageUrl }));
     } catch (error) {
         console.error("Error updating profile picture: ", error);
     } finally {
@@ -165,13 +155,17 @@ const Profile = ({ currentUser, setUser }) => {
         batch.update(senderUserRef, { connections: arrayUnion(currentUser.sub) });
   
         await batch.commit();
-        setConnectionStatus('connected');
+        
+        // Update global user state for immediate UI feedback
+        setUser(prevUser => ({
+          ...prevUser,
+          connections: [...(prevUser.connections || []), profileUser.id]
+        }));
       } else { // rejected
         await updateDoc(doc(db, 'requests', requestDocId), {
             status: 'rejected',
             updatedAt: serverTimestamp(),
         });
-        setConnectionStatus('not_connected');
       }
       setRequestDocId(null);
     } catch (error) {
@@ -192,7 +186,11 @@ const Profile = ({ currentUser, setUser }) => {
 
       try {
           await batch.commit();
-          setConnectionStatus('not_connected');
+           // Update global user state for immediate UI feedback
+          setUser(prevUser => ({
+            ...prevUser,
+            connections: (prevUser.connections || []).filter(id => id !== profileUser.id)
+          }));
       } catch(error) {
           console.error("Error disconnecting:", error);
       }
@@ -228,8 +226,7 @@ const Profile = ({ currentUser, setUser }) => {
   };
 
   const renderConnectionButton = () => {
-    if (loading) return null;
-
+    // We remove 'loading' from here because the main useEffect handles it
     switch (connectionStatus) {
       case 'connected':
         return (
@@ -243,7 +240,7 @@ const Profile = ({ currentUser, setUser }) => {
       case 'pending_received':
         return (
           <div className="request-response-btns">
-            <button className="profile-action-btn accept" onClick={() => handleRespondToRequest('accepted')}>Accept Request</button>
+            <button className="profile-action-btn accept" onClick={() => handleRespondToRequest('accepted')}>Accept</button>
             <button className="profile-action-btn reject" onClick={() => handleRespondToRequest('rejected')}>Reject</button>
           </div>
         );
@@ -254,41 +251,30 @@ const Profile = ({ currentUser, setUser }) => {
     }
   };
   
-  const renderContextualButtons = () => {
-    if (loading || isOwnProfile || connectionStatus !== 'connected' || !currentUser || !profileUser) return null;
-
-    const currentUserRole = currentUser.role;
-    const profileUserRole = profileUser.role;
-
-    return (
-      <div className="contextual-actions">
-        {currentUserRole === 'player' && profileUserRole === 'coach' &&
-          <button className="contextual-btn" onClick={() => handleSendRequest('coaching')}>Request Coaching</button>
-        }
-        {currentUserRole === 'coach' && profileUserRole === 'player' &&
-          <button className="contextual-btn" onClick={() => handleSendRequest('scouting')}>Express Scouting Interest</button>
-        }
-        {currentUserRole === 'player' && profileUserRole === 'player' &&
-          <button className="contextual-btn" onClick={() => handleSendRequest('practice')}>Suggest Practice</button>
-        }
-      </div>
-    );
-  };
-  
   if (loading) return <div className="profile-page-container"><p>Loading profile...</p></div>;
   if (!profileUser) return <div className="profile-page-container"><p>User not found.</p></div>;
 
   const age = calculateAge(profileUser.dob);
+  const connectionCount = profileUser.connections ? profileUser.connections.length : 0;
 
   return (
     <div className="profile-page-container">
         <div className="profile-header-banner">
+            
+            {isOwnProfile && (
+              <div className="profile-edit-button-container">
+                <button className="profile-action-btn edit-profile" onClick={() => navigate('/edit-profile')}>
+                    <Edit3 size={16} /> Edit Profile
+                </button>
+              </div>
+            )}
+
             <div className="profile-avatar-wrapper">
                 <img src={profileUser.picture} alt={profileUser.name} className="profile-main-avatar" />
                 {isOwnProfile && (
                     <button className="change-photo-btn" onClick={() => fileInputRef.current.click()}>
                         <Camera size={20} />
-                        <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleImageUpload}/>
+                        <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleImageUpload}/>
                     </button>
                 )}
                 {isUploading && <div className="upload-spinner"></div>}
@@ -297,20 +283,20 @@ const Profile = ({ currentUser, setUser }) => {
         
         <div className="profile-view">
             <div className="profile-details">
-                <div className="profile-actions-header">
-                    {isOwnProfile ? (
-                        <button className="profile-action-btn edit-profile" onClick={() => navigate('/edit-profile')}>
-                            <Edit3 size={16} /> Edit Profile
-                        </button>
-                    ) : renderConnectionButton()}
-                </div>
+
+                {!isOwnProfile && (
+                  <div className="profile-actions-header">
+                    {renderConnectionButton()}
+                  </div>
+                )}
+                
                 <h1>{profileUser.name}</h1>
                 <div className="profile-meta">
                     <span className={`profile-role ${profileUser.role}`}>{profileUser.role || 'Not Specified'}</span>
                     {age && <span> • {age} years old</span>}
                     {profileUser.homeState && <span> • From {profileUser.homeState}</span>}
+                    <span> • <Link to={`/profile/${userId}/connections`} className="connections-link">{connectionCount} Connections</Link></span>
                 </div>
-                {renderContextualButtons()}
             </div>
 
             <div className="profile-info-grid">
@@ -328,15 +314,7 @@ const Profile = ({ currentUser, setUser }) => {
               </div>
               <div className="info-item full-width">
                   <h4>Key Achievements</h4>
-                  {profileUser.achievements ? (
-                      <ul className="achievements-list">
-                          {profileUser.achievements.split(',').map((item, index) => (
-                              <li key={index}>{item.trim()}</li>
-                          ))}
-                      </ul>
-                  ) : (
-                      <p>No achievements listed.</p>
-                  )}
+                  <p>{profileUser.achievements || 'No achievements listed.'}</p>
               </div>
             </div>
         </div>

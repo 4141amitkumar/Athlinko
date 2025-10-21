@@ -13,26 +13,6 @@
   position: relative;
 }
 
-.edit-profile-btn {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background-color: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: 1px solid white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: background-color 0.2s;
-}
-.edit-profile-btn:hover {
-    background-color: rgba(255, 255, 255, 0.3);
-}
-
 .profile-avatar-wrapper {
   position: absolute;
   bottom: -75px; 
@@ -76,16 +56,31 @@
 .profile-view {
   padding-bottom: 2rem;
 }
+
 .profile-details {
   padding: 100px 2rem 2rem 2rem; 
   text-align: center;
   border-bottom: 1px solid #f0f0f0;
+  position: relative;
 }
+
 .profile-details h1 { font-size: 2.2rem; margin: 0; color: #1c1e21; }
 .profile-meta { display: flex; justify-content: center; gap: 1rem; color: #65676B; margin-top: 0.5rem; flex-wrap: wrap; }
 .profile-role { font-size: 1rem; color: #fff; padding: 4px 15px; border-radius: 15px; text-transform: capitalize; display: inline-block; }
 .profile-role.player { background-color: #007bff; }
 .profile-role.coach { background-color: #28a745; }
+
+/* Connections Link Style */
+.connections-link {
+  color: #65676B;
+  font-weight: 600;
+  text-decoration: none;
+}
+.connections-link:hover {
+  text-decoration: underline;
+  color: #8B0000;
+}
+
 
 .profile-info-grid {
   display: grid;
@@ -102,7 +97,7 @@
 .info-item.full-width {
   grid-column: 1 / -1;
 }
-.info-item h3 {
+.info-item h4 {
   margin: 0 0 0.5rem 0;
   color: #8B0000;
   font-size: 1rem;
@@ -114,63 +109,17 @@
   white-space: pre-wrap;
 }
 
-/* --- Edit Mode Styles --- */
-.profile-edit-form {
-  padding: 2rem;
-}
-.profile-edit-form h2 {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: #333;
-}
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-.form-group { display: flex; flex-direction: column; }
-.form-group.full-width { grid-column: 1 / -1; }
-.form-group label { font-weight: 600; margin-bottom: 8px; color: #333; }
-.form-group input, .form-group select, .form-group textarea {
-  width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px;
-  border: 1px solid #ccc; transition: border-color 0.2s;
-}
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-  outline: none; border-color: #8B0000;
-}
-.form-group textarea { min-height: 100px; resize: vertical; }
-.edit-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; }
-.cancel-btn, .save-btn { border: none; padding: 12px 24px; font-size: 1rem; font-weight: 600; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; }
-.cancel-btn { background-color: #f0f2f5; color: #333; }
-.cancel-btn:hover { background-color: #e2e6ea; }
-.save-btn { background-color: #8B0000; color: white; }
-.save-btn:hover { background-color: #B22222; }
-/* ... All original styles ... */
+/* --- Action Buttons --- */
 
-/* --- Dark Mode --- */
-.dark .profile-page-container, .dark .edit-profile-container {
-  background-color: #242526;
-}
-.dark .profile-details h1, .dark .info-item h3, .dark .profile-edit-form h1, .dark .form-group label {
-  color: #e4e6eb;
-}
-.dark .profile-meta, .dark .info-item p {
-  color: #b0b3b8;
-}
-.dark .info-item {
-  background-color: #3a3b3c;
-}
-.dark .profile-edit-form input, .dark .edit-profile-form select, .dark .edit-profile-form textarea {
-    background-color: #3a3b3c;
-    border-color: #555;
-    color: #e4e6eb;
-}
-.dark .cancel-btn {
-  background-color: #3a3b3c;
-  color: #e4e6eb;
-}
-.dark .cancel-btn:hover {
-  background-color: #555;
+/* Container for Edit button */
+.profile-edit-button-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
 }
 
-/* ... existing styles ... */
-
+/* Container for Connection/Message buttons */
 .profile-actions-header {
   position: absolute;
   top: 20px;
@@ -201,12 +150,12 @@
   transform: translateY(-1px);
 }
 .profile-action-btn.edit-profile {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.3);
   color: white;
   border: 1px solid white;
 }
 .profile-action-btn.edit-profile:hover {
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(255, 255, 255, 0.4);
 }
 
 .profile-action-btn.connect {
@@ -242,7 +191,76 @@
   background-color: #166fe5;
 }
 
+.request-response-btns {
+    display: flex;
+    gap: 10px;
+}
+.request-response-btns .accept {
+    background-color: #8B0000;
+    color: white;
+    border: none;
+}
+.request-response-btns .reject {
+    background-color: #e4e6eb;
+    color: #333;
+    border: none;
+}
 
-/* ... rest of the existing styles ... */
+.contextual-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+.contextual-btn {
+  background-color: #f0f2f5;
+  border: 1px solid #dcdfe3;
+  color: #333;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.contextual-btn:hover {
+    background-color: #e2e6ea;
+}
 
+.achievements-list { padding-left: 20px; margin: 0; }
+.achievements-list li { margin-bottom: 5px; }
+
+
+/* --- Dark Mode --- */
+.dark .profile-page-container {
+  background-color: #242526;
+}
+.dark .profile-details h1, .dark .info-item h4 {
+  color: #e4e6eb;
+}
+.dark .profile-meta, .dark .info-item p, .dark .connections-link {
+  color: #b0b3b8;
+}
+.dark .info-item {
+  background-color: #3a3b3c;
+}
+.dark .cancel-btn {
+  background-color: #3a3b3c;
+  color: #e4e6eb;
+}
+.dark .cancel-btn:hover {
+  background-color: #555;
+}
+.dark .profile-details {
+  border-bottom-color: #3a3b3c;
+}
+.dark .profile-action-btn, .dark .contextual-btn { background-color: #4b4c4d; color: #e4e6eb; border-color: #555;}
+.dark .profile-action-btn:hover, .dark .contextual-btn:hover { background-color: #5a5b5c; }
+.dark .profile-action-btn.edit-profile { background-color: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.5); color: white;}
+.dark .profile-action-btn.edit-profile:hover { background-color: rgba(255, 255, 255, 0.2); }
+.dark .profile-action-btn.connect, .dark .request-response-btns .accept { background-color: #e57373; color: #18191a; border-color: #e57373;}
+.dark .profile-action-btn.connect:hover, .dark .request-response-btns .accept:hover { background-color: #ef9a9a; }
+.dark .profile-action-btn.connected { background-color: transparent; border-color: #3f9252; color: #3f9252; }
+.dark .profile-action-btn.connected:hover { background-color: rgba(63, 146, 82, 0.1); }
+.dark .connections-link:hover {
+  color: #e57373;
+}
 

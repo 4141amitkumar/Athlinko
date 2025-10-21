@@ -1,31 +1,57 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import './Register.css';
 
 const Register = ({ setUser }) => {
   const navigate = useNavigate();
-  // ✅ Corrected the typo here
-  const [role, setRole] = useState(''); 
+  const [role, setRole] = useState('');
   const [googleProfile, setGoogleProfile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    setError('');
+    try {
+      const decoded = jwtDecode(credentialResponse.credential);
+      const userRef = doc(db, "users", decoded.sub);
+      const docSnap = await getDoc(userRef);
+
+      if (docSnap.exists()) {
+        setError('This email is already registered. Please log in.');
+        setTimeout(() => navigate('/login'), 3000);
+      } else {
+        setGoogleProfile(decoded);
+      }
+    } catch (err) {
+      console.error("Google sign-in check failed:", err);
+      setError('An error occurred during sign-in. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!role) {
-      alert("Please select your role to continue.");
-      return;
-    }
-    if (!googleProfile) {
-      alert("An error occurred. Please try signing in again.");
+    if (!role || !googleProfile) {
+      alert("Please select a role to continue.");
       return;
     }
 
     setLoading(true);
-    const userProfile = { ...googleProfile, role, createdAt: serverTimestamp() };
+    const userProfile = {
+        sub: googleProfile.sub,
+        name: googleProfile.name,
+        email: googleProfile.email,
+        picture: googleProfile.picture,
+        role: role,
+        createdAt: serverTimestamp(),
+        connections: []
+    };
 
     try {
       await setDoc(doc(db, "users", googleProfile.sub), userProfile);
@@ -39,31 +65,31 @@ const Register = ({ setUser }) => {
     }
   };
 
-  const handleGoogleSuccess = (credentialResponse) => {
-    const decoded = jwtDecode(credentialResponse.credential);
-    setGoogleProfile(decoded);
-  };
-
   return (
     <div className="register-container">
       <div className="register-card">
         {!googleProfile ? (
           <>
             <div className="register-header">
-              <span role="img" aria-label="wave" style={{fontSize: '2rem', marginRight: '10px'}}></span>
+              <span role="img" aria-label="wave" style={{fontSize: '2rem', marginRight: '10px'}}>👋</span>
               <h2>Create Your Account</h2>
             </div>
-            <p className="register-subtitle">First, let's get you signed in with Google. It's fast and secure.</p>
+            <p className="register-subtitle">First, sign in with Google. It's fast and secure.</p>
             <div className="google-btn-container">
-              <GoogleLogin 
+              {loading ? <div className="loader"></div> : <GoogleLogin 
                 onSuccess={handleGoogleSuccess} 
-                onError={() => console.log('Login Failed')}
+                onError={() => setError('Google login failed. Please try again.')}
                 theme="outline"
                 size="large"
                 shape="pill"
                 width="300px"
-              />
+              />}
             </div>
+            {error && (
+              <div className="error-message">
+                {error} {error.includes('registered') && <Link to="/login">Go to Login</Link>}
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -87,7 +113,7 @@ const Register = ({ setUser }) => {
                   </div>
                 </label>
               </div>
-              <button type="submit" className="register-button" disabled={loading}>
+              <button type="submit" className="register-button" disabled={loading || !role}>
                 {loading ? 'Setting up...' : 'Complete Registration'}
               </button>
             </form>
@@ -99,4 +125,3 @@ const Register = ({ setUser }) => {
 };
 
 export default Register;
-
