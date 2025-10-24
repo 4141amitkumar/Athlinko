@@ -1,0 +1,179 @@
+.question-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+  overflow: hidden;
+}
+
+.question-section {
+  padding: 1.5rem;
+}
+
+.asker-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+
+.asker-info img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.asker-name {
+  font-weight: 600;
+  color: #333;
+  text-decoration: none;
+}
+.asker-name:hover {
+  text-decoration: underline;
+}
+
+.question-timestamp {
+  font-size: 0.8rem;
+  color: #888;
+  display: block;
+}
+
+.question-text {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #222;
+  margin: 0;
+}
+
+.answers-section {
+  background-color: #f9f9f9;
+  padding: 1.5rem;
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+}
+
+.answer {
+  border-bottom: 1px solid #e5e5e5;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+.answer:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.answer-text {
+  margin: 0;
+  padding-left: 52px; /* Align with question text */
+  color: #444;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.no-answers {
+  color: #777;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.answer-form-container {
+  padding: 1.5rem;
+}
+
+.answer-prompt-btn {
+  background: none;
+  border: 1px solid #8B0000;
+  color: #8B0000;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.answer-prompt-btn:hover {
+  background: #fce8e8;
+}
+
+.answer-form textarea {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+  resize: vertical;
+}
+
+.answer-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.answer-form-actions .cancel-btn {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.answer-form-actions .submit-answer-btn {
+  background-color: #8B0000;
+  color: white;
+}
+.answer-form-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.answer-form-actions button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Dark Mode */
+.dark .question-card {
+  background-color: #242526;
+}
+.dark .question-section {
+  border-bottom-color: #3a3b3c;
+}
+.dark .asker-name {
+  color: #e4e6eb;
+}
+.dark .question-timestamp {
+  color: #b0b3b8;
+}
+.dark .question-text {
+  color: #e4e6eb;
+}
+.dark .answers-section {
+  background-color: #1c1c1c;
+  border-color: #3a3b3c;
+}
+.dark .answer {
+  border-bottom-color: #3a3b3c;
+}
+.dark .answer-text {
+  color: #d1d1d1;
+}
+.dark .no-answers {
+  color: #888;
+}
+.dark .answer-prompt-btn {
+  color: #e57373;
+  border-color: #e57373;
+}
+.dark .answer-prompt-btn:hover {
+  background-color: rgba(229, 115, 115, 0.1);
+}
+.dark .answer-form textarea {
+  background-color: #3a3b3c;
+  border-color: #555;
+  color: #e4e6eb;
+}
+.dark .answer-form-actions .cancel-btn {
+  background: #4b4c4d;
+  color: #e4e6eb;
+}

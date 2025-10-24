@@ -1,0 +1,85 @@
+.wishlist-page-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 1rem;
+}
+
+.wishlist-page-container h1 {
+  text-align: center;
+  color: #8B0000;
+  margin-bottom: 2rem;
+}
+
+.wishlist-message {
+  text-align: center;
+  font-size: 1.2rem;
+  color: #666;
+  margin-top: 3rem;
+}
+
+.wishlist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Reusing styles from Search/Connections for consistency */
+.user-card-link {
+    text-decoration: none;
+}
+
+.user-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.user-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    border: 3px solid #f0f0f0;
+    object-fit: cover;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #050505;
+}
+
+.user-role {
+    font-size: 0.85rem;
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 15px;
+    margin-top: 0.5rem;
+    text-transform: capitalize;
+}
+
+.user-role.player {
+    background-color: #007bff;
+}
+
+.dark .wishlist-page-container h1 { color: #e57373; }
+.dark .wishlist-message { color: #b0b3b8; }
+.dark .user-card { background-color: #242526; border-color: #3a3b3c; }
+.dark .user-avatar { border-color: #3a3b3c; }
+.dark .user-name { color: #e4e6eb; }

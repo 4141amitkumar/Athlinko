@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Sun, Moon, LogOut, User as UserIcon, Bell, Trophy, Users, MessageSquare } from 'lucide-react';
+import { Sun, Moon, LogOut, User as UserIcon, Bell, Trophy, Users, MessageSquare, HelpCircle, Home, UserPlus, Search, Star } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, getDocs, orderBy, doc, updateDoc, serverTimestamp, writeBatch, arrayUnion } from 'firebase/firestore';
 import RequestsDropdown from './RequestsDropdown';
@@ -63,7 +63,7 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
         const lastMessageTime = convo.lastMessageTimestamp?.toDate();
         if (lastRead && lastMessageTime && lastMessageTime > lastRead) {
           unreadCount++;
-        } else if (!lastRead && convo.lastMessage) { // Handle case where lastRead is not set yet
+        } else if (!lastRead && convo.lastMessage) {
           unreadCount++;
         }
       });
@@ -119,10 +119,14 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
         
         {user && (
           <div className="navbar-menu">
-            <Link to="/feed" className={`nav-item ${location.pathname === '/feed' ? 'active' : ''}`}>Feed</Link>
-            <Link to="/search" className={`nav-item ${location.pathname.startsWith('/search') ? 'active' : ''}`}>Search</Link>
+            <Link to="/feed" className={`nav-item ${location.pathname === '/feed' ? 'active' : ''}`}><Home size={18}/><span>Feed</span></Link>
+            <Link to="/search" className={`nav-item ${location.pathname.startsWith('/search') ? 'active' : ''}`}><Search size={18}/><span>Search</span></Link>
+            <Link to="/groups" className={`nav-item ${location.pathname.startsWith('/groups') ? 'active' : ''}`}><Users size={18}/><span>Communities</span></Link>
             <Link to="/tournaments" className={`nav-item ${location.pathname.startsWith('/tournaments') ? 'active' : ''}`}>
               <Trophy size={18} /><span>Tournaments</span>
+            </Link>
+            <Link to="/qna" className={`nav-item ${location.pathname.startsWith('/qna') ? 'active' : ''}`}>
+              <HelpCircle size={18} /><span>Ask an Expert</span>
             </Link>
           </div>
         )}
@@ -140,7 +144,7 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
               </Link>
               <div className="notification-container" ref={requestsRef}>
                 <button className="action-btn notification-bell" onClick={() => setShowRequests(!showRequests)}>
-                  <Users size={22} />
+                  <UserPlus size={22} />
                   {connectionRequests.length > 0 && <span className="notification-badge">{connectionRequests.length}</span>}
                 </button>
                 {showRequests && <RequestsDropdown requests={connectionRequests} onAccept={handleAcceptRequest} onReject={handleRejectRequest} />}
@@ -180,6 +184,11 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
                     </div>
                     <div className="dropdown-actions">
                       <button onClick={handleViewProfile} className="dropdown-btn"><UserIcon size={16} /><span>My Profile</span></button>
+                      {user.role === 'coach' && (
+                        <button onClick={() => {navigate('/wishlist'); setShowDropdown(false);}} className="dropdown-btn">
+                          <Star size={16} /><span>My Wishlist</span>
+                        </button>
+                      )}
                       <hr className="dropdown-divider" />
                       <button onClick={handleLogout} className="dropdown-btn logout-btn"><LogOut size={16} /><span>Sign Out</span></button>
                     </div>

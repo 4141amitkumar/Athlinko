@@ -1,0 +1,86 @@
+.group-detail-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.group-detail-header {
+  background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://placehold.co/1200x300/8B0000/FFFFFF?text=Community');
+  background-size: cover;
+  background-position: center;
+  padding: 3rem 2rem;
+  color: white;
+  border-radius: 0 0 12px 12px;
+}
+
+.header-content h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2.5rem;
+}
+
+.header-content p {
+  font-size: 1.1rem;
+  max-width: 700px;
+}
+
+.header-meta {
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.join-leave-btn {
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.join-leave-btn.join {
+  background-color: #28a745;
+  color: white;
+}
+.join-leave-btn.join:hover {
+  background-color: #218838;
+}
+
+.join-leave-btn.leave {
+  background-color: #dc3545;
+  color: white;
+}
+.join-leave-btn.leave:hover {
+  background-color: #c82333;
+}
+
+.group-detail-body {
+  padding: 2rem;
+}
+
+.group-posts-feed {
+  margin-top: 2rem;
+}
+
+.join-prompt {
+  text-align: center;
+  padding: 3rem;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+}
+
+.loading-text-center {
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.2rem;
+    color: #666;
+}
+
+/* Dark Mode */
+.dark .join-prompt {
+    background-color: #242526;
+    color: #e4e6eb;
+}
+.dark .loading-text-center {
+    color: #b0b3b8;
+}

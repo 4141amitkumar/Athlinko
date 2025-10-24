@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { db, storage } from '../firebase';
 import { doc, getDoc, onSnapshot, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Camera, Edit3, UserPlus, UserCheck, Clock, UserX, MessageSquare } from 'lucide-react';
+import { Camera, Edit3, UserPlus, UserCheck, Clock, MessageSquare, Star, Award, PlusCircle } from 'lucide-react';
+import PlayerStats from '../components/PlayerStats'; // Import the new component
 import './Profile.css';
 
 // Helper function to calculate age from date of birth
@@ -29,6 +30,8 @@ const Profile = ({ currentUser, setUser }) => {
   const [requestDocId, setRequestDocId] = useState(null);
   const fileInputRef = useRef(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [activeTab, setActiveTab] = useState('info'); // State for active tab
 
   useEffect(() => {
     if (!userId) {
@@ -45,12 +48,10 @@ const Profile = ({ currentUser, setUser }) => {
         const userData = { id: docSnap.id, ...docSnap.data() };
         setProfileUser(userData);
 
-        // Fetch connection status if it's not the user's own profile
         if (!ownProfileCheck && currentUser) {
             if (userData.connections?.includes(currentUser.sub)) {
                 setConnectionStatus('connected');
             } else {
-                // Check for pending requests
                 const q1 = query(collection(db, 'requests'), where('senderId', '==', currentUser.sub), where('receiverId', '==', userId), where('status', '==', 'pending'));
                 getDocs(q1).then(sentSnap => {
                     if (!sentSnap.empty) {
@@ -71,17 +72,26 @@ const Profile = ({ currentUser, setUser }) => {
             }
         }
       } else {
-        console.log("No such user!");
         setProfileUser(null);
       }
       setLoading(false);
-    }, (error) => {
-      console.error("Error fetching user data:", error);
-      setLoading(false);
     });
+
+    // Listener for coach's wishlist
+    let unsubWishlist;
+    if (currentUser?.role === 'coach' && !ownProfileCheck) {
+        unsubWishlist = onSnapshot(doc(db, 'users', currentUser.sub), (coachDoc) => {
+            if (coachDoc.exists()) {
+                const coachData = coachDoc.data();
+                setIsInWishlist(coachData.wishlist?.includes(userId) || false);
+            }
+        });
+    }
+
 
     return () => {
       unsubProfileUser();
+      if (unsubWishlist) unsubWishlist();
     };
   }, [userId, currentUser]);
 
@@ -96,7 +106,6 @@ const Profile = ({ currentUser, setUser }) => {
         const userDocRef = doc(db, 'users', userId);
         await updateDoc(userDocRef, { picture: newImageUrl });
         
-        // Update user state in App.js as well
         setUser(prevUser => ({ ...prevUser, picture: newImageUrl }));
     } catch (error) {
         console.error("Error updating profile picture: ", error);
@@ -156,12 +165,11 @@ const Profile = ({ currentUser, setUser }) => {
   
         await batch.commit();
         
-        // Update global user state for immediate UI feedback
         setUser(prevUser => ({
           ...prevUser,
           connections: [...(prevUser.connections || []), profileUser.id]
         }));
-      } else { // rejected
+      } else { 
         await updateDoc(doc(db, 'requests', requestDocId), {
             status: 'rejected',
             updatedAt: serverTimestamp(),
@@ -186,7 +194,6 @@ const Profile = ({ currentUser, setUser }) => {
 
       try {
           await batch.commit();
-           // Update global user state for immediate UI feedback
           setUser(prevUser => ({
             ...prevUser,
             connections: (prevUser.connections || []).filter(id => id !== profileUser.id)
@@ -225,8 +232,20 @@ const Profile = ({ currentUser, setUser }) => {
     }
   };
 
+  const handleWishlistToggle = async () => {
+    if (currentUser?.role !== 'coach' || !profileUser) return;
+
+    const coachRef = doc(db, 'users', currentUser.sub);
+    try {
+        await updateDoc(coachRef, {
+            wishlist: isInWishlist ? arrayRemove(profileUser.id) : arrayUnion(profileUser.id)
+        });
+    } catch (error) {
+        console.error("Error toggling wishlist:", error);
+    }
+  };
+
   const renderConnectionButton = () => {
-    // We remove 'loading' from here because the main useEffect handles it
     switch (connectionStatus) {
       case 'connected':
         return (
@@ -272,10 +291,12 @@ const Profile = ({ currentUser, setUser }) => {
             <div className="profile-avatar-wrapper">
                 <img src={profileUser.picture} alt={profileUser.name} className="profile-main-avatar" />
                 {isOwnProfile && (
-                    <button className="change-photo-btn" onClick={() => fileInputRef.current.click()}>
-                        <Camera size={20} />
-                        <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleImageUpload}/>
-                    </button>
+                    <>
+                        <label htmlFor="profile-picture-upload" className="change-photo-btn">
+                            <Camera size={20} />
+                        </label>
+                        <input type="file" id="profile-picture-upload" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleImageUpload}/>
+                    </>
                 )}
                 {isUploading && <div className="upload-spinner"></div>}
             </div>
@@ -290,33 +311,63 @@ const Profile = ({ currentUser, setUser }) => {
                   </div>
                 )}
                 
-                <h1>{profileUser.name}</h1>
+                <h1>
+                  {profileUser.name}
+                  {profileUser.role === 'coach' && <Award className="expert-badge" size={24} />}
+                </h1>
                 <div className="profile-meta">
                     <span className={`profile-role ${profileUser.role}`}>{profileUser.role || 'Not Specified'}</span>
                     {age && <span> • {age} years old</span>}
                     {profileUser.homeState && <span> • From {profileUser.homeState}</span>}
                     <span> • <Link to={`/profile/${userId}/connections`} className="connections-link">{connectionCount} Connections</Link></span>
                 </div>
+
+                {currentUser?.role === 'coach' && !isOwnProfile && profileUser.role === 'player' && (
+                    <div className="contextual-actions">
+                        <button className="contextual-btn" onClick={handleWishlistToggle}>
+                            <Star size={16} fill={isInWishlist ? '#f39c12' : 'none'} stroke={isInWishlist ? '#f39c12' : 'currentColor'} />
+                            {isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                        </button>
+                    </div>
+                )}
+            </div>
+            
+            <div className="profile-tabs">
+                <button className={`tab-btn ${activeTab === 'info' ? 'active' : ''}`} onClick={() => setActiveTab('info')}>Info</button>
+                <button className={`tab-btn ${activeTab === 'stats' ? 'active' : ''}`} onClick={() => setActiveTab('stats')}>Stats</button>
             </div>
 
-            <div className="profile-info-grid">
-              <div className="info-item">
-                  <h4>Primary Sport</h4>
-                  <p>{profileUser.primarySport || 'Not Specified'}</p>
-              </div>
-              <div className="info-item">
-                  <h4>Email</h4>
-                  <p>{profileUser.email || 'Not Specified'}</p>
-              </div>
-              <div className="info-item full-width">
-                  <h4>Bio & Experience</h4>
-                  <p className="profile-bio">{profileUser.experience || 'No bio provided.'}</p>
-              </div>
-              <div className="info-item full-width">
-                  <h4>Key Achievements</h4>
-                  <p>{profileUser.achievements || 'No achievements listed.'}</p>
-              </div>
-            </div>
+            {activeTab === 'info' ? (
+                <div className="profile-info-grid">
+                    <div className="info-item">
+                        <h4>Primary Sport</h4>
+                        <p>{profileUser.primarySport || 'Not Specified'}</p>
+                    </div>
+                    <div className="info-item">
+                        <h4>Email</h4>
+                        <p>{profileUser.email || 'Not Specified'}</p>
+                    </div>
+                    <div className="info-item full-width">
+                        <h4>Bio & Experience</h4>
+                        <p className="profile-bio">{profileUser.experience || 'No bio provided.'}</p>
+                    </div>
+                    <div className="info-item full-width">
+                        <h4>Key Achievements</h4>
+                        <p>{profileUser.achievements || 'No achievements listed.'}</p>
+                    </div>
+                </div>
+            ) : (
+                <div className="profile-stats-section">
+                    {isOwnProfile && (
+                        <div className="stats-header">
+                            <button className="add-performance-btn" onClick={() => navigate('/add-performance')}>
+                                <PlusCircle size={16} /> Add Performance
+                            </button>
+                        </div>
+                    )}
+                    <PlayerStats userId={userId} />
+                </div>
+            )}
         </div>
     </div>
   );
