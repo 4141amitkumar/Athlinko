@@ -5,13 +5,11 @@ import cloudinary from "../config/cloudinary.js";
 
 const router = express.Router();
 
-// ✅ Create a Post (with optional image upload)
 router.post("/", upload.single("image"), async (req, res) => {
   try {
     const { userId, content } = req.body;
     let imageUrl = "";
 
-    // ✅ Upload image to Cloudinary if provided
     if (req.file) {
       const result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
@@ -26,7 +24,6 @@ router.post("/", upload.single("image"), async (req, res) => {
       imageUrl = result.secure_url;
     }
 
-    // ✅ Create post
     const newPost = new Post({
       user: userId,
       content,
@@ -38,12 +35,11 @@ router.post("/", upload.single("image"), async (req, res) => {
 
     res.status(201).json(populatedPost);
   } catch (err) {
-    console.error("❌ Post creation error:", err);
+    console.error("Post creation error:", err);
     res.status(500).json({ message: "Failed to create post", error: err.message });
   }
 });
 
-// ✅ Get All Posts (latest first)
 router.get("/", async (req, res) => {
   try {
     const posts = await Post.find()
@@ -56,7 +52,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ Like / Unlike a Post
 router.put("/:id/like", async (req, res) => {
   try {
     const { userId } = req.body;
@@ -79,7 +74,7 @@ router.put("/:id/like", async (req, res) => {
   }
 });
 
-// ✅ Add a Comment
+// Add a Comment
 router.post("/:id/comment", async (req, res) => {
   try {
     const { userId, text } = req.body;

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Added useEffect import
 import { Image as ImageIcon, X } from 'lucide-react';
 import './CreatePost.css';
 
@@ -10,53 +10,100 @@ const CreatePost = ({ user, onCreatePost }) => {
   const imageInputRef = useRef(null);
   const textareaRef = useRef(null);
 
-  // Textarea ko content ke hisab se automatically resize karein
   const handleTextChange = (e) => {
     setPostText(e.target.value);
     const textarea = textareaRef.current;
-    textarea.style.height = 'auto'; // Reset height
-    textarea.style.height = `${textarea.scrollHeight}px`; // Set to scroll height
+    if (textarea) {
+        textarea.style.height = 'auto'; // Reset height
+        textarea.style.height = `${textarea.scrollHeight}px`; // Set to scroll height
+    }
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Basic validation (optional)
+      if (!file.type.startsWith('image/')) {
+          alert('Please select an image file.');
+          return;
+      }
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+         alert('Image size should be less than 5MB.');
+         return;
+      }
+
       setImageFile(file);
+      // Revoke previous URL to prevent memory leaks
+      if (imagePreview) {
+          URL.revokeObjectURL(imagePreview);
+      }
       setImagePreview(URL.createObjectURL(file));
     }
   };
 
   const removeImage = () => {
+    // Revoke object URL
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
     setImageFile(null);
     setImagePreview('');
-    if (imageInputRef.current) imageInputRef.current.value = null;
+    if (imageInputRef.current) imageInputRef.current.value = null; // Reset file input
   };
 
   const handleSubmit = async () => {
+    // Add check for user ID
+    if (!user?.uid) {
+        alert("Please log in to post.");
+        return;
+    }
     if (!postText.trim() && !imageFile) return;
+
     setLoading(true);
-    await onCreatePost(postText, imageFile);
-    setPostText('');
-    removeImage();
-    if (textareaRef.current) textareaRef.current.style.height = 'auto';
-    setLoading(false);
+    try {
+        await onCreatePost(postText, imageFile);
+        // Reset state only after successful post creation
+        setPostText('');
+        removeImage(); // This also clears the file input
+        if (textareaRef.current) textareaRef.current.style.height = 'auto'; // Reset textarea height
+    } catch (error) {
+        // Error handling might be done in the parent (Feed.js), but log here too
+        console.error("Error during post submission:", error);
+        // Optionally show an error message to the user here
+    } finally {
+        setLoading(false);
+    }
   };
+
+  // Cleanup object URL on unmount
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
 
   return (
     <div className="create-post-container">
       <div className="create-post-header">
-        <img 
-          src={user?.picture || 'https://via.placeholder.com/50'}
-          alt="User Avatar" 
+        <img
+          // Use user.picture, fallback if needed
+          src={user?.picture || 'https://via.placeholder.com/45'}
+          alt="User Avatar"
           className="user-avatar"
+          // Add onerror handler for broken image links
+           onError={(e) => { e.target.onerror = null; e.target.src="https://via.placeholder.com/45"; }}
         />
-        <textarea 
+        <textarea
           ref={textareaRef}
           value={postText}
           onChange={handleTextChange}
           className="create-post-input"
-          placeholder={`What's on your mind, ${user?.given_name || 'User'}?`}
-          rows={1} // Start with a single row
+          // Use user.name, fallback if needed
+          placeholder={`What's on your mind, ${user?.name || 'User'}?`}
+          rows={1}
         />
       </div>
 
@@ -68,16 +115,17 @@ const CreatePost = ({ user, onCreatePost }) => {
       )}
 
       <div className="create-post-actions">
-        <button className="action-icon-btn" onClick={() => imageInputRef.current.click()}>
+        {/* Trigger file input click */}
+        <button type="button" className="action-icon-btn" onClick={() => imageInputRef.current?.click()}>
           <ImageIcon size={22} color="#45bd62" />
           <span>Photo</span>
         </button>
-        <input 
-          type="file" 
+        <input
+          type="file"
           accept="image/*"
           ref={imageInputRef}
           onChange={handleImageChange}
-          style={{ display: 'none' }} 
+          style={{ display: 'none' }} // Keep hidden
         />
         <button onClick={handleSubmit} className="post-button" disabled={loading || (!postText.trim() && !imageFile)}>
           {loading ? 'Posting...' : 'Post'}

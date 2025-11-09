@@ -1,6 +1,6 @@
 // middleware/authMiddleware.js
 
-const { admin } = require('../db'); // Assuming your firebase admin init is in db.js
+const { admin } = require('../db'); 
 
 const authMiddleware = async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -11,8 +11,8 @@ const authMiddleware = async (req, res, next) => {
     const idToken = authHeader.split('Bearer ')[1];
     try {
         const decodedToken = await admin.auth().verifyIdToken(idToken);
-        req.user = decodedToken; // User ki details ko request object mein add kar do
-        next(); // Agle step pe jao
+        req.user = decodedToken;
+        next(); 
     } catch (error) {
         console.error('Error verifying token:', error);
         res.status(403).send('Unauthorized: Invalid token');

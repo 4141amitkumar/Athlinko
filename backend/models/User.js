@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema(
     },
     picture: {
       type: String,
-      default: "https://via.placeholder.com/150", // fallback profile picture
+      default: "https://via.placeholder.com/150", 
     },
     role: {
       type: String,

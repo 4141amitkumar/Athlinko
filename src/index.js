@@ -1,12 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import './style.css';
-import GoogleAuthProvider from './GoogleAuthProvider';
+import './style.css'; // Or './index.css' if that's your primary CSS file
+
+// Removed the import for GoogleAuthProvider from './GoogleAuthProvider';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <GoogleAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
-    <App />
-  </GoogleAuthProvider>
+  // Removed the <GoogleAuthProvider> wrapper
+  <App />
 );

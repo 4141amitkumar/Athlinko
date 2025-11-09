@@ -13,26 +13,35 @@ const Groups = ({ currentUser }) => {
   const [newGroupDesc, setNewGroupDesc] = useState('');
 
   useEffect(() => {
+    setLoading(true); // Start loading
     const q = query(collection(db, 'groups'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const groupsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setGroups(groupsData);
-      setLoading(false);
+      setLoading(false); // Stop loading after data fetch
+    }, (error) => { // Add error handling
+        console.error("Error fetching groups:", error);
+        setLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
   const handleCreateGroup = async (e) => {
     e.preventDefault();
+    // Add check for currentUser and currentUser.uid
+    if (!currentUser?.uid) {
+        alert("You must be logged in to create a group.");
+        return;
+    }
     if (!newGroupName.trim() || !newGroupDesc.trim()) return;
 
     try {
       await addDoc(collection(db, 'groups'), {
         name: newGroupName,
         description: newGroupDesc,
-        creatorId: currentUser.sub,
-        creatorName: currentUser.name,
-        members: [currentUser.sub],
+        creatorId: currentUser.uid, // Use uid
+        creatorName: currentUser.name, // Ensure 'name' is correct property
+        members: [currentUser.uid], // Use uid
         createdAt: serverTimestamp(),
       });
       setNewGroupName('');
@@ -40,6 +49,7 @@ const Groups = ({ currentUser }) => {
       setShowCreateForm(false);
     } catch (error) {
       console.error("Error creating group: ", error);
+      alert("Failed to create group. Please try again.");
     }
   };
 
@@ -85,11 +95,13 @@ const Groups = ({ currentUser }) => {
             <h3>{group.name}</h3>
             <p>{group.description}</p>
             <div className="group-card-footer">
-              <span>{group.members.length} member(s)</span>
-              <span>Created by {group.creatorName}</span>
+              {/* Display member count safely */}
+              <span>{group.members?.length || 0} member(s)</span>
+              <span>Created by {group.creatorName || 'Unknown'}</span>
             </div>
           </Link>
         ))}
+         {groups.length === 0 && !loading && <p>No communities found. Why not create one?</p>}
       </div>
     </div>
   );

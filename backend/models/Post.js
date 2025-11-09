@@ -28,7 +28,7 @@ const postSchema = new mongoose.Schema(
       trim: true,
     },
     image: {
-      type: String, // Optional (photo/video URL)
+      type: String, 
       default: "",
     },
     likes: [
@@ -37,7 +37,7 @@ const postSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
-    comments: [commentSchema], // ✅ nested comments
+    comments: [commentSchema], 
   },
   { timestamps: true }
 );

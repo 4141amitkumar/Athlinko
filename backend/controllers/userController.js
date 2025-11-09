@@ -1,6 +1,5 @@
 import User from "../models/User.js";
 
-// ✅ Register or Login User (Upsert with findOneAndUpdate)
 export const registerUser = async (req, res) => {
   try {
     const { name, email, picture, role } = req.body;
@@ -12,7 +11,6 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // Atomic Upsert
     const user = await User.findOneAndUpdate(
       { email },
       { name, picture, role },
@@ -25,7 +23,7 @@ export const registerUser = async (req, res) => {
       data: user,
     });
   } catch (error) {
-    console.error("❌ Error in registerUser:", error);
+    console.error("Error in registerUser:", error);
     res.status(500).json({
       success: false,
       message: "Server error while registering user",
@@ -33,7 +31,6 @@ export const registerUser = async (req, res) => {
   }
 };
 
-// ✅ Get all users
 export const getUsers = async (req, res) => {
   try {
     const users = await User.find().select("-__v -updatedAt");
@@ -50,7 +47,6 @@ export const getUsers = async (req, res) => {
   }
 };
 
-// ✅ Get single user by ID
 export const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select("-__v -updatedAt");

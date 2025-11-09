@@ -2,10 +2,9 @@
 
 const express = require('express');
 const router = express.Router();
-const { db } = require('../db'); // Assuming your firebase admin init is in db.js
+const { db } = require('../db'); 
 const { FieldValue } = require('firebase-admin/firestore');
-const authMiddleware = require('../middleware/authMiddleware'); // Yeh file hum abhi banayenge
-
+const authMiddleware = require('../middleware/authMiddleware'); 
 // GET: Saare active tournaments fetch karna
 router.get('/active', async (req, res) => {
     try {
