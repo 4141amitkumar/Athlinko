@@ -22,7 +22,7 @@ const GroupDetail = ({ currentUser }) => {
       if (docSnap.exists()) {
         const groupData = { id: docSnap.id, ...docSnap.data() };
         setGroup(groupData);
-        setIsMember(groupData.members?.includes(currentUser.sub));
+        setIsMember(groupData.members?.includes(currentUser.uid)); // Use uid instead of sub
       } else {
         setGroup(null);
       }
@@ -39,13 +39,13 @@ const GroupDetail = ({ currentUser }) => {
       unsubscribeGroup();
       unsubscribePosts();
     };
-  }, [groupId, currentUser.sub]);
+  }, [groupId, currentUser.uid]); // Use uid instead of sub
 
   const handleJoinLeave = async () => {
     const groupRef = doc(db, 'groups', groupId);
     try {
       await updateDoc(groupRef, {
-        members: isMember ? arrayRemove(currentUser.sub) : arrayUnion(currentUser.sub)
+        members: isMember ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) // Use uid instead of sub
       });
     } catch (error) {
       console.error("Error updating membership:", error);
@@ -57,7 +57,7 @@ const GroupDetail = ({ currentUser }) => {
     if (!postText.trim()) return;
     try {
       await addDoc(collection(db, 'groups', groupId, 'posts'), {
-        user: { name: currentUser.name, avatar: currentUser.picture, userId: currentUser.sub },
+        user: { name: currentUser.name, avatar: currentUser.picture, userId: currentUser.uid }, // Use uid instead of sub
         content: { text: postText, image: null },
         likes: 0,
         comments: 0,

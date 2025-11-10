@@ -18,9 +18,9 @@ const PostCard = ({ post, user, onLike, onDelete }) => {
   const [newComment, setNewComment] = useState('');
   const [showCopyNotification, setShowCopyNotification] = useState(false); // ✅ Share notification ke liye state
   
-  const userId = user ? user.sub : null;
+  const userId = user ? user.uid : null; // Use uid instead of sub
   const isLiked = post.likedBy?.includes(userId);
-  const isOwner = user && user.sub === post.user.userId;
+  const isOwner = user && user.uid === post.user.userId; // Use uid instead of sub
 
   useEffect(() => {
     const commentsQuery = query(collection(db, 'posts', post.id, 'comments'), orderBy('timestamp', 'asc'));
@@ -89,9 +89,9 @@ const FPostCard = ({ post, user, onLike, onDelete }) => {
     const [commentsList, setCommentsList] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [showCopyNotification, setShowCopyNotification] = useState(false);
-    const userId = user ? user.sub : null;
+    const userId = user ? user.uid : null; // Use uid instead of sub
     const isLiked = post.likedBy?.includes(userId);
-    const isOwner = user && user.sub === post.user.userId;
+    const isOwner = user && user.uid === post.user.userId; // Use uid instead of sub
 
     useEffect(() => {
         const commentsQuery = query(collection(db, 'posts', post.id, 'comments'), orderBy('timestamp', 'asc'));
@@ -107,7 +107,7 @@ const FPostCard = ({ post, user, onLike, onDelete }) => {
         try {
             await addDoc(collection(db, 'posts', post.id, 'comments'), {
                 text: newComment,
-                user: { name: user.name, avatar: user.picture, userId: user.sub },
+                user: { name: user.name, avatar: user.picture, userId: user.uid }, // Use uid instead of sub
                 timestamp: serverTimestamp()
             });
             await updateDoc(doc(db, 'posts', post.id), { comments: increment(1) });
@@ -172,7 +172,7 @@ const FPostCard = ({ post, user, onLike, onDelete }) => {
                     </form>
                     <div className="comments-list">
                         {commentsList.map(comment => {
-                            const isCommentOwner = user && user.sub === comment.user.userId;
+                            const isCommentOwner = user && user.uid === comment.user.userId; // Use uid instead of sub
                             return (
                                 <div key={comment.id} className="comment">
                                     <img src={comment.user.avatar} alt="Commenter's avatar" className="comment-avatar" />
@@ -192,4 +192,3 @@ const FPostCard = ({ post, user, onLike, onDelete }) => {
 };
 
 export default FPostCard;
-

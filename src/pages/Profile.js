@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { db, storage } from '../firebase';
-import { doc, getDoc, onSnapshot, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Camera, Edit3, UserPlus, UserCheck, Clock, MessageSquare, Star, Award, PlusCircle } from 'lucide-react';
 import PlayerStats from '../components/PlayerStats'; // Import the new component
+import SkeletonLoader from '../components/SkeletonLoader'; // Import SkeletonLoader
+import { createNotification } from '../utils/notifications'; // Import notification helper
 import './Profile.css';
 
 // Helper function to calculate age from date of birth
@@ -34,12 +36,18 @@ const Profile = ({ currentUser, setUser }) => {
   const [activeTab, setActiveTab] = useState('info'); // State for active tab
 
   useEffect(() => {
+    // Reset state when userId changes
+    setLoading(true);
+    setProfileUser(null);
+    setConnectionStatus('loading');
+    setActiveTab('info');
+
     if (!userId) {
       setLoading(false);
       return;
     }
 
-    const ownProfileCheck = currentUser && currentUser.sub === userId;
+    const ownProfileCheck = currentUser && currentUser.uid === userId;
     setIsOwnProfile(ownProfileCheck);
     
     // Real-time listener for the profile user's data
@@ -49,21 +57,66 @@ const Profile = ({ currentUser, setUser }) => {
         setProfileUser(userData);
 
         if (!ownProfileCheck && currentUser) {
-            if (userData.connections?.includes(currentUser.sub)) {
+            
+            // --- YEH RAHA FIX (Self-Healing Logic) ---
+            
+            // currentUser = Viewer (Aap)
+            // userData = Profile owner (Jiska profile dekh rahe hain)
+            // userId = Profile owner's ID
+
+            // Case 1: Agar main (viewer) already connected hoon (meri list mein ID hai)
+            if (currentUser.connections?.includes(userId)) {
                 setConnectionStatus('connected');
+
+                // Self-Heal (Part 1): Agar meri list mein hai, par unki list mein nahi, toh add kar dein.
+                // (Aisa tab ho sakta hai agar sender ne request accept ki thi)
+                if (!userData.connections?.includes(currentUser.uid)) {
+                    console.log(`Self-healing: Adding ${currentUser.uid} to ${userId}'s connections`);
+                    const profileUserRef = doc(db, 'users', userId);
+                    updateDoc(profileUserRef, { connections: arrayUnion(currentUser.uid) });
+                }
+            
+            // Case 2: Agar main connected nahi hoon, par woh (profile owner) mujhse connected hai
+            } else if (userData.connections?.includes(currentUser.uid)) {
+                setConnectionStatus('connected');
+                
+                // Self-Heal (Part 2): Unki list mein hai, par meri list mein nahi. Apni list update karo.
+                // (Aisa tab hoga jab maine request bheji thi aur unhone accept ki)
+                console.log(`Self-healing: Adding ${userId} to ${currentUser.uid}'s connections`);
+                const currentUserRef = doc(db, 'users', currentUser.uid);
+                updateDoc(currentUserRef, { connections: arrayUnion(userId) });
+
             } else {
-                const q1 = query(collection(db, 'requests'), where('senderId', '==', currentUser.sub), where('receiverId', '==', userId), where('status', '==', 'pending'));
+                // Case 3: Koi bhi connected nahi hai. Ab requests check karo.
+                
+                // q1: Kya maine (viewer) unhe (profile owner) request bhej rakhi hai?
+                // Yahaan status filter nahi karenge, taaki 'accepted' bhi pakad sakein
+                const q1 = query(collection(db, 'requests'), where('senderId', '==', currentUser.uid), where('receiverId', '==', userId));
                 getDocs(q1).then(sentSnap => {
                     if (!sentSnap.empty) {
-                        setConnectionStatus('pending_sent');
-                        setRequestDocId(sentSnap.docs[0].id);
+                        const request = sentSnap.docs[0].data();
+                        if (request.status === 'pending') {
+                            setConnectionStatus('pending_sent');
+                            setRequestDocId(sentSnap.docs[0].id);
+                        } else if (request.status === 'accepted') {
+                            // Self-Heal (Part 3): Request accepted hai, par list update nahi hui.
+                            console.log(`Self-healing: Found accepted request, updating lists.`);
+                            setConnectionStatus('connected');
+                            const myRef = doc(db, 'users', currentUser.uid);
+                            updateDoc(myRef, { connections: arrayUnion(userId) }); // Apni list update karo
+                        } else {
+                            // Status 'rejected' hai
+                            setConnectionStatus('not_connected');
+                        }
                     } else {
-                        const q2 = query(collection(db, 'requests'), where('senderId', '==', userId), where('receiverId', '==', currentUser.sub), where('status', '==', 'pending'));
+                        // q2: Kya unhone (profile owner) mujhe (viewer) PENDING request bhej rakhi hai?
+                        const q2 = query(collection(db, 'requests'), where('senderId', '==', userId), where('receiverId', '==', currentUser.uid), where('status', '==', 'pending'));
                         getDocs(q2).then(receivedSnap => {
                             if (!receivedSnap.empty) {
                                 setConnectionStatus('pending_received');
                                 setRequestDocId(receivedSnap.docs[0].id);
                             } else {
+                                // Na koi connection, na koi pending/accepted request
                                 setConnectionStatus('not_connected');
                             }
                         });
@@ -80,7 +133,7 @@ const Profile = ({ currentUser, setUser }) => {
     // Listener for coach's wishlist
     let unsubWishlist;
     if (currentUser?.role === 'coach' && !ownProfileCheck) {
-        unsubWishlist = onSnapshot(doc(db, 'users', currentUser.sub), (coachDoc) => {
+        unsubWishlist = onSnapshot(doc(db, 'users', currentUser.uid), (coachDoc) => { // Use uid
             if (coachDoc.exists()) {
                 const coachData = coachDoc.data();
                 setIsInWishlist(coachData.wishlist?.includes(userId) || false);
@@ -88,12 +141,11 @@ const Profile = ({ currentUser, setUser }) => {
         });
     }
 
-
     return () => {
       unsubProfileUser();
       if (unsubWishlist) unsubWishlist();
     };
-  }, [userId, currentUser]);
+  }, [userId, currentUser]); // currentUser par depend karein taaki viewer ki list update hone par re-run ho
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -118,7 +170,7 @@ const Profile = ({ currentUser, setUser }) => {
     if (!currentUser || !profileUser) return;
     try {
       const docRef = await addDoc(collection(db, 'requests'), {
-        senderId: currentUser.sub,
+        senderId: currentUser.uid,
         senderName: currentUser.name,
         senderPicture: currentUser.picture,
         senderRole: currentUser.role,
@@ -133,6 +185,14 @@ const Profile = ({ currentUser, setUser }) => {
       });
       setConnectionStatus('pending_sent');
       setRequestDocId(docRef.id);
+      
+       // ** NOTIFICATION TRIGGER **
+       await createNotification(
+            profileUser.id, 
+            `${currentUser.name} sent you a connection request.`, 
+            `/profile/${currentUser.uid}` // Link back to sender's profile
+       );
+
     } catch (error) {
       console.error("Error sending request:", error);
     }
@@ -157,11 +217,12 @@ const Profile = ({ currentUser, setUser }) => {
         const requestRef = doc(db, 'requests', requestDocId);
         batch.update(requestRef, { status: 'accepted', updatedAt: serverTimestamp() });
   
-        const currentUserRef = doc(db, 'users', currentUser.sub);
+        const currentUserRef = doc(db, 'users', currentUser.uid);
         batch.update(currentUserRef, { connections: arrayUnion(profileUser.id) });
   
-        const senderUserRef = doc(db, 'users', profileUser.id);
-        batch.update(senderUserRef, { connections: arrayUnion(currentUser.sub) });
+        // Sender ki list update karne waali line HATA DI GAYI hai (self-heal logic handle karega)
+        // const senderUserRef = doc(db, 'users', profileUser.id);
+        // batch.update(senderUserRef, { connections: arrayUnion(currentUser.uid) });
   
         await batch.commit();
         
@@ -169,12 +230,21 @@ const Profile = ({ currentUser, setUser }) => {
           ...prevUser,
           connections: [...(prevUser.connections || []), profileUser.id]
         }));
+        
+        // ** NOTIFICATION TRIGGER **
+        await createNotification(
+            profileUser.id, // The user who sent the request
+            `${currentUser.name} accepted your connection request.`,
+            `/profile/${currentUser.uid}` // Link to current user's profile
+        );
+
       } else { 
         await updateDoc(doc(db, 'requests', requestDocId), {
             status: 'rejected',
             updatedAt: serverTimestamp(),
         });
       }
+      setConnectionStatus('not_connected'); // Go back to not connected state
       setRequestDocId(null);
     } catch (error) {
       console.error("Error responding to request:", error);
@@ -182,15 +252,18 @@ const Profile = ({ currentUser, setUser }) => {
   };
 
   const handleDisconnect = async () => {
-      if (!window.confirm("Are you sure you want to remove this connection?")) return;
+      // Use a simple confirm dialog (replace with modal for better UX later)
+      if (!window.confirm("Are you sure you want to remove this connection?")) {
+          return;
+      }
       if (!profileUser) return;
       const batch = writeBatch(db);
 
-      const currentUserRef = doc(db, 'users', currentUser.sub);
+      const currentUserRef = doc(db, 'users', currentUser.uid);
       batch.update(currentUserRef, { connections: arrayRemove(profileUser.id) });
 
       const otherUserRef = doc(db, 'users', profileUser.id);
-      batch.update(otherUserRef, { connections: arrayRemove(currentUser.sub) });
+      batch.update(otherUserRef, { connections: arrayRemove(currentUser.uid) });
 
       try {
           await batch.commit();
@@ -198,6 +271,7 @@ const Profile = ({ currentUser, setUser }) => {
             ...prevUser,
             connections: (prevUser.connections || []).filter(id => id !== profileUser.id)
           }));
+          setConnectionStatus('not_connected'); // Update status
       } catch(error) {
           console.error("Error disconnecting:", error);
       }
@@ -205,7 +279,7 @@ const Profile = ({ currentUser, setUser }) => {
 
   const handleMessage = async () => {
     if (!currentUser || !profileUser) return;
-    const participants = [currentUser.sub, profileUser.id].sort();
+    const participants = [currentUser.uid, profileUser.id].sort();
     const conversationQuery = query(
         collection(db, 'conversations'),
         where('participants', '==', participants)
@@ -219,10 +293,11 @@ const Profile = ({ currentUser, setUser }) => {
             const newConversationRef = await addDoc(collection(db, 'conversations'), {
                 participants,
                 participantInfo: {
-                    [currentUser.sub]: { name: currentUser.name, picture: currentUser.picture, lastRead: serverTimestamp() },
+                    [currentUser.uid]: { name: currentUser.name, picture: currentUser.picture, lastRead: serverTimestamp() },
                     [profileUser.id]: { name: profileUser.name, picture: profileUser.picture, lastRead: new Date(0) }
                 },
                 lastMessage: '',
+                lastMessageSenderId: null,
                 lastMessageTimestamp: serverTimestamp()
             });
             navigate(`/messages/${newConversationRef.id}`);
@@ -235,11 +310,21 @@ const Profile = ({ currentUser, setUser }) => {
   const handleWishlistToggle = async () => {
     if (currentUser?.role !== 'coach' || !profileUser) return;
 
-    const coachRef = doc(db, 'users', currentUser.sub);
+    const coachRef = doc(db, 'users', currentUser.uid);
     try {
         await updateDoc(coachRef, {
             wishlist: isInWishlist ? arrayRemove(profileUser.id) : arrayUnion(profileUser.id)
         });
+        
+        // ** NOTIFICATION TRIGGER **
+        if (!isInWishlist) { // Only notify when adding
+             await createNotification(
+                profileUser.id, // The player
+                `${currentUser.name} added you to their wishlist!`,
+                `/profile/${currentUser.uid}` // Link to coach's profile
+            );
+        }
+
     } catch (error) {
         console.error("Error toggling wishlist:", error);
     }
@@ -266,11 +351,11 @@ const Profile = ({ currentUser, setUser }) => {
       case 'not_connected':
         return <button className="profile-action-btn connect" onClick={() => handleSendRequest('connection')}><UserPlus size={16} /> Connect</button>;
       default:
-        return null;
+        return null; // 'loading' state
     }
   };
   
-  if (loading) return <div className="profile-page-container"><p>Loading profile...</p></div>;
+  if (loading) return <SkeletonLoader type="profile" />; // Use Profile Skeleton
   if (!profileUser) return <div className="profile-page-container"><p>User not found.</p></div>;
 
   const age = calculateAge(profileUser.dob);
@@ -365,7 +450,7 @@ const Profile = ({ currentUser, setUser }) => {
                             </button>
                         </div>
                     )}
-                    <PlayerStats userId={userId} />
+                    <PlayerStats userId={userId} isOwnProfile={isOwnProfile} primarySport={profileUser.primarySport} />
                 </div>
             )}
         </div>
@@ -374,4 +459,3 @@ const Profile = ({ currentUser, setUser }) => {
 };
 
 export default Profile;
-

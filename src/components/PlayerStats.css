@@ -22,6 +22,29 @@
     margin-bottom: 1rem;
 }
 
+/* --- New Chart Styles --- */
+.chart-container {
+    width: 100%;
+    height: 300px; /* Explicit height for chart container */
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
+
+.custom-tooltip {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.custom-tooltip .label {
+    font-weight: 600;
+    color: #000;
+    margin-bottom: 5px;
+}
+/* --- End New Chart Styles --- */
+
+
 /* Summary Cards */
 .stats-summary {
     display: flex;
@@ -179,3 +202,23 @@
     background-color: #422a2a;
 }
 
+/* --- Dark Mode Chart --- */
+.dark .chart-container {
+    background-color: #242526;
+}
+.dark .custom-tooltip {
+    background-color: #3a3b3c;
+    border-color: #555;
+}
+.dark .custom-tooltip .label {
+    color: #e4e6eb;
+}
+.dark .recharts-cartesian-grid-line {
+    stroke: #444 !important;
+}
+.dark .recharts-text {
+    fill: #b0b3b8 !important;
+}
+.dark .recharts-legend-item {
+    color: #b0b3b8 !important;
+}

@@ -18,7 +18,7 @@ const Requests = ({ currentUser }) => {
         // Listener for received requests
         const receivedQuery = query(
             collection(db, 'requests'),
-            where('receiverId', '==', currentUser.sub),
+            where('receiverId', '==', currentUser.uid), // Use uid instead of sub
             where('status', '==', 'pending')
         );
         const unsubscribeReceived = onSnapshot(receivedQuery, (snapshot) => {
@@ -30,7 +30,7 @@ const Requests = ({ currentUser }) => {
         // Listener for sent requests
         const sentQuery = query(
             collection(db, 'requests'),
-            where('senderId', '==', currentUser.sub),
+            where('senderId', '==', currentUser.uid), // Use uid instead of sub
             where('status', '==', 'pending')
         );
         const unsubscribeSent = onSnapshot(sentQuery, (snapshot) => {

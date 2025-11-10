@@ -8,14 +8,14 @@ import { getAuth } from "firebase/auth"; // Import Firebase Auth
 // Your web app's Firebase configuration - KEEP AS IS
 // Make sure these keys are correct for your Firebase project 'athlinko-new'
 const firebaseConfig = {
-  apiKey: "AIzaSyAS5Xbi4XbDWy-YsvKxwgUwgDtq9IgVWjQ", // Keep this
-  authDomain: "athlinko-33994.firebaseapp.com",
-  databaseURL: "https://athlinko-33994-default-rtdb.firebaseio.com",
-  projectId: "athlinko-33994",
-  storageBucket: "athlinko-33994.firebasestorage.app",
-  messagingSenderId: "614648250953",
-  appId: "1:614648250953:web:3c39127fdaa47300e93598",
-  measurementId: "G-QDFHV5BVTC"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase

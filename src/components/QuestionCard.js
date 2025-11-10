@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { db } from '../firebase';
 import { doc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
+import { createNotification } from '../utils/notifications'; // Notification helper import
 import './QuestionCard.css';
 
 const formatTimeAgo = (timestamp) => {
@@ -60,6 +61,18 @@ const QuestionCard = ({ question, currentUser }) => {
           timestamp: serverTimestamp(),
         })
       });
+      
+      // ** NOTIFICATION TRIGGER **
+      const askerId = question.asker?.id;
+      // Agar asker valid hai aur coach khud ke sawaal ka jawaab nahi de raha
+      if (askerId && askerId !== currentUser.uid) {
+        createNotification(
+            askerId,
+            `${currentUser.name} answered your question.`,
+            `/qna` // Link to QnA page
+        );
+      }
+
       setNewAnswer(''); // Clear on success
       setShowAnswerInput(false); // Hide form on success
     } catch (error) {

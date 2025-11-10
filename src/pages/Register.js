@@ -1,177 +1,127 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { db, auth } from '../firebase'; // Import auth and db
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'; // Import Firebase auth functions
-import './Register.css';
+import { Link } from 'react-router-dom';
+import { db } from '../firebase';
+import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { createNotification } from '../utils/notifications'; // Notification helper import
+import './Requests.css';
 
-const Register = ({ setUser }) => {
-    const navigate = useNavigate();
-    const location = useLocation(); // To potentially receive pre-filled info if redirected from login
-    const [role, setRole] = useState('');
-    const [firebaseUser, setFirebaseUser] = useState(null); // Store Firebase user info after sign-in
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+const Requests = ({ currentUser }) => {
+    const [receivedRequests, setReceivedRequests] = useState([]);
+    const [sentRequests, setSentRequests] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // Check if user info was passed from Login page (if user didn't exist there)
     useEffect(() => {
-        if (location.state?.firebaseUser) {
-            setFirebaseUser(location.state.firebaseUser);
-        }
-    }, [location.state]);
+        if (!currentUser) return;
 
-    const handleGoogleSignIn = async () => {
         setLoading(true);
-        setError('');
-        const provider = new GoogleAuthProvider();
-        try {
-            const result = await signInWithPopup(auth, provider);
-            const user = result.user;
 
-            // Check if user ALREADY exists in Firestore
-            const userRef = doc(db, "users", user.uid);
-            const docSnap = await getDoc(userRef);
-
-            if (docSnap.exists()) {
-                // If user exists, they should log in instead
-                setError('This email is already registered. Please log in.');
-                // Optional: Automatically log them in? Or just redirect.
-                // For now, redirecting to login after a delay.
-                setTimeout(() => navigate('/login'), 3000);
-
-            } else {
-                // User is new, store their info and proceed to role selection
-                setFirebaseUser({
-                    uid: user.uid,
-                    displayName: user.displayName,
-                    email: user.email,
-                    photoURL: user.photoURL,
-                });
-            }
-        } catch (error) {
-            console.error("Google sign-in check failed:", error);
-             if (error.code === 'auth/popup-closed-by-user') {
-                setError('Sign-in cancelled. Please try again.');
-            } else if (error.code === 'auth/cancelled-popup-request') {
-                 setError(''); // Don't show error if multiple popups were simply cancelled
-            }
-             else {
-                setError('An error occurred during sign-in. Please try again.');
-            }
-        } finally {
+        // Listener for received requests
+        const receivedQuery = query(
+            collection(db, 'requests'),
+            where('receiverId', '==', currentUser.uid), // Use uid
+            where('status', '==', 'pending')
+        );
+        const unsubscribeReceived = onSnapshot(receivedQuery, (snapshot) => {
+            const reqs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setReceivedRequests(reqs);
             setLoading(false);
-        }
-    };
+        });
 
-    const handleRegister = async (e) => {
-        e.preventDefault();
-        if (!role || !firebaseUser) {
-            setError("Please select a role to continue.");
-            return;
-        }
-        setError('');
-        setLoading(true);
+        // Listener for sent requests
+        const sentQuery = query(
+            collection(db, 'requests'),
+            where('senderId', '==', currentUser.uid), // Use uid
+            where('status', '==', 'pending')
+        );
+        const unsubscribeSent = onSnapshot(sentQuery, (snapshot) => {
+            const reqs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setSentRequests(reqs);
+        });
 
-        // Prepare user profile data for Firestore
-        const userProfile = {
-            // Use details from Firebase Auth
-            uid: firebaseUser.uid, // Keep uid consistent
-            name: firebaseUser.displayName,
-            email: firebaseUser.email,
-            picture: firebaseUser.photoURL,
-            // Add the selected role
-            role: role,
-            // Add default/initial values for other fields
-            createdAt: serverTimestamp(),
-            connections: [],
-            dob: '',
-            homeState: '',
-            primarySport: '',
-            experience: '',
-            achievements: '',
-            // Add wishlist for coaches
-            ...(role === 'coach' && { wishlist: [] })
+        return () => {
+            unsubscribeReceived();
+            unsubscribeSent();
         };
+    }, [currentUser]);
 
-        try {
-            // Save the new user profile to Firestore using their Firebase UID
-            await setDoc(doc(db, "users", firebaseUser.uid), userProfile);
+    // *** YEH RAHA FIX ***
+    const handleAcceptRequest = async (request) => {
+      const batch = writeBatch(db);
 
-            // Update the global user state in App.js
-            setUser(userProfile); // Pass the complete profile
+      // 1. Request document ko update karein
+      const requestRef = doc(db, 'requests', request.id);
+      batch.update(requestRef, { status: 'accepted', updatedAt: serverTimestamp() });
+      
+      // 2. Current user (receiver) ki connection list update karein
+      const currentUserRef = doc(db, 'users', request.receiverId);
+      batch.update(currentUserRef, { connections: arrayUnion(request.senderId) });
+      
+      // 3. Sender ki list update karne waali line HATA DI GAYI hai
+      // const senderUserRef = doc(db, 'users', request.senderId);
+      // batch.update(senderUserRef, { connections: arrayUnion(request.receiverId) }); // <-- YEH LINE PROBLEM THI
 
-            // Navigate to the feed
-            navigate('/feed');
-
-        } catch (error) {
-            console.error("Error creating user profile in Firestore: ", error);
-            setError("Failed to create profile. Please try again.");
-        } finally {
-            setLoading(false);
-        }
+      try {
+          await batch.commit(); // Ab yeh batch successful hoga
+          
+          // 4. Sender ko notification bhejein (batch ke baad)
+          await createNotification(
+              request.senderId, 
+              `${currentUser.name} accepted your connection request.`, 
+              `/profile/${currentUser.uid}`
+          );
+      } catch (error) { 
+          console.error("Error accepting request:", error); 
+      }
+    };
+  
+    const handleRejectRequest = async (requestId) => {
+      const requestRef = doc(db, 'requests', requestId);
+      try {
+          await updateDoc(requestRef, { status: 'rejected', updatedAt: serverTimestamp() });
+      } catch (error) { console.error("Error rejecting request:", error); }
     };
 
     return (
-        <div className="register-container">
-            <div className="register-card">
-                {!firebaseUser ? (
-                    // Step 1: Sign in with Google
-                    <>
-                        <div className="register-header">
-                            <span role="img" aria-label="wave" style={{ fontSize: '2rem', marginRight: '10px' }}>👋</span>
-                            <h2>Create Your Account</h2>
-                        </div>
-                        <p className="register-subtitle">First, sign in with Google to get started.</p>
-                        <div className="google-btn-container">
-                            {loading ? <div className="loader"></div> : (
-                                <button className="auth-btn google-sign-in-btn" onClick={handleGoogleSignIn}>
-                                     <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" style={{ marginRight: '10px', height: '20px' }} />
-                                    Sign in with Google
-                                </button>
-                            )}
-                        </div>
-                        {error && (
-                            <div className="error-message">
-                                {error} {error.includes('registered') && <Link to="/login">Go to Login</Link>}
+        <div className="requests-page-container">
+            <h1>Connection Requests</h1>
+
+            <div className="requests-section">
+                <h2>Received ({receivedRequests.length})</h2>
+                {loading ? <p>Loading...</p> : (
+                    <div className="requests-list-full">
+                        {receivedRequests.length > 0 ? receivedRequests.map(req => (
+                            <div key={req.id} className="request-card">
+                                <img src={req.senderPicture} alt={req.senderName} />
+                                <div className="request-card-info">
+                                    <Link to={`/profile/${req.senderId}`}>{req.senderName}</Link>
+                                    <span>Wants to connect with you.</span>
+                                </div>
+                                <div className="request-card-actions">
+                                    <button onClick={() => handleAcceptRequest(req)} className="accept">Accept</button>
+                                    <button onClick={() => handleRejectRequest(req.id)} className="reject">Reject</button>
+                                </div>
                             </div>
-                        )}
-                         <p className="join-link" style={{marginTop: '1.5rem'}}>
-                            Already have an account? <a href="/login">Sign In</a>
-                        </p>
-                    </>
-                ) : (
-                    // Step 2: Choose Role and Complete Registration
-                    <>
-                        <img src={firebaseUser.photoURL || 'https://via.placeholder.com/80'} alt="Your Profile" className="profile-pic" />
-                        <h2>Welcome, {firebaseUser.displayName}!</h2>
-                        <p className="register-subtitle">Just one last step. Choose your role.</p>
-                        <form onSubmit={handleRegister}>
-                            <div className="role-options">
-                                <label className={`role-label ${role === 'player' ? 'selected' : ''}`}>
-                                    <input type="radio" name="role" value="player" className="role-input" onChange={(e) => setRole(e.target.value)} checked={role === 'player'} />
-                                    <div className="role-content">
-                                        <span role="img" aria-label="Player">🏃</span>
-                                        <span>I am a Player</span>
-                                    </div>
-                                </label>
-                                <label className={`role-label ${role === 'coach' ? 'selected' : ''}`}>
-                                    <input type="radio" name="role" value="coach" className="role-input" onChange={(e) => setRole(e.target.value)} checked={role === 'coach'}/>
-                                    <div className="role-content">
-                                        <span role="img" aria-label="Coach">📋</span>
-                                        <span>I am a Coach</span>
-                                    </div>
-                                </label>
-                            </div>
-                             {error && <p className="error-message" style={{ color: '#c91c3b', marginBottom: '1rem' }}>{error}</p>}
-                            <button type="submit" className="register-button" disabled={loading || !role}>
-                                {loading ? 'Setting up...' : 'Complete Registration'}
-                            </button>
-                        </form>
-                    </>
+                        )) : <p>No new requests.</p>}
+                    </div>
                 )}
+            </div>
+
+            <div className="requests-section">
+                <h2>Sent ({sentRequests.length})</h2>
+                 <div className="requests-list-full">
+                    {sentRequests.length > 0 ? sentRequests.map(req => (
+                        <div key={req.id} className="request-card">
+                            <img src={req.receiverPicture} alt={req.receiverName} />
+                            <div className="request-card-info">
+                                <Link to={`/profile/${req.receiverId}`}>{req.receiverName}</Link>
+                                <span>Request pending.</span>
+                            </div>
+                        </div>
+                    )) : <p>No pending sent requests.</p>}
+                </div>
             </div>
         </div>
     );
 };
 
-export default Register;
+export default Requests;

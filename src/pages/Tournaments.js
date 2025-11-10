@@ -1,202 +1,171 @@
-import React, { useState, useEffect } from 'react';
-// Corrected paths to '../components/'
-import PostCard from '../components/PostCard';
-import CreatePost from '../components/CreatePost';
-import { db, storage } from '../firebase';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { collection, query, onSnapshot, addDoc, doc, updateDoc, orderBy, serverTimestamp, arrayUnion, arrayRemove, increment, deleteDoc } from 'firebase/firestore';
-import './Feed.css'; // Ensure this path is correct
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { db } from '../firebase';
+import { collection, query, onSnapshot, orderBy, where, updateDoc, doc, arrayUnion, arrayRemove, Timestamp } from 'firebase/firestore';
+import FilterBar from '../components/FilterBar'; // Import FilterBar
+import './Tournaments.css'; // Import dedicated CSS
 
-const Feed = ({ user }) => {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+const TournamentCard = ({ tournament, user }) => {
+    // Determine registration status
+    const isRegistered = tournament.participants?.includes(user.uid);
+    const [isPast, setIsPast] = useState(false);
 
-  useEffect(() => {
-    setLoading(true); // Set loading true when starting fetch
-    const q = query(collection(db, 'posts'), orderBy('timestamp', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setPosts(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
-      setLoading(false);
-    }, (error) => { // Add error handling
-      console.error("Error fetching posts:", error);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const handleCreatePost = async (postText, imageFile) => {
-    // Add check for user and user.uid
-    if (!user?.uid) {
-        console.error("User not logged in, cannot create post.");
-        return;
-    }
-    if (!postText.trim() && !imageFile) return;
-
-    let imageUrl = null;
-    let imageRef = null; // Store image ref for potential deletion on error
-
-    // Image Upload Logic
-    if (imageFile) {
-      imageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${imageFile.name}`); // Include user ID in path
-      try {
-        const snapshot = await uploadBytes(imageRef, imageFile);
-        imageUrl = await getDownloadURL(snapshot.ref);
-      } catch (error) {
-        console.error("Image upload failed:", error);
-        alert("Image upload failed. Please try again."); // Inform user
-        return; // Stop post creation if image upload fails
-      }
-    }
-
-    // Firestore Post Creation Logic
-    try {
-      await addDoc(collection(db, 'posts'), {
-        user: { name: user.name, avatar: user.picture, userId: user.uid }, // Use user.uid
-        content: { text: postText, image: imageUrl },
-        likes: 0,
-        comments: 0,
-        likedBy: [],
-        timestamp: serverTimestamp(),
-      });
-      // Reset form handled by CreatePost component after successful onCreatePost call
-    } catch (error) {
-      console.error("Error creating post:", error);
-      alert("Failed to create post. Please try again."); // Inform user
-      // If image was uploaded but Firestore failed, delete the image
-      if (imageUrl && imageRef) {
-          try {
-              await deleteObject(imageRef);
-              console.log("Cleaned up orphaned image due to post creation error.");
-          } catch (deleteError) {
-              console.error("Error deleting orphaned image:", deleteError);
-          }
-      }
-    }
-  };
-
-  const handleDeletePost = async (postToDelete) => {
-    // Use user.uid for check
-    if (!user?.uid || user.uid !== postToDelete.user.userId) {
-         alert("You can only delete your own posts.");
-         return;
-    }
-    if (!window.confirm("Are you sure you want to delete this post?")) return;
-    try {
-      // Delete Image from Storage if it exists
-      if (postToDelete.content.image) {
-        try {
-            // Attempt to create ref from URL - requires parsing or storing path separately
-            // For simplicity, assuming the URL structure allows direct ref creation (might need adjustment)
-            const imageRef = ref(storage, postToDelete.content.image);
-            await deleteObject(imageRef);
-        } catch (storageError) {
-             // Log error but continue trying to delete Firestore doc
-            console.error("Error deleting post image from storage (might be harmless if URL format changed or file already gone):", storageError);
+    useEffect(() => {
+        if (tournament.endDate) {
+            // Convert Firestore Timestamp to Date, then compare
+            const endDate = tournament.endDate.toDate();
+            setIsPast(endDate < new Date());
         }
-      }
-      // Delete Post Document from Firestore
-      await deleteDoc(doc(db, 'posts', postToDelete.id));
-      // No need to update local state, onSnapshot will handle it
-    } catch (error) {
-      console.error("Error deleting post: ", error);
-      alert("Failed to delete post. Please try again.");
-    }
-  };
+    }, [tournament.endDate]);
 
-
-  const handleLikePost = async (postId) => {
-    // Use user.uid for check and update
-    if (!user?.uid) return;
-    const postRef = doc(db, 'posts', postId);
-    // Find post in local state to check if already liked
-    const post = posts.find(p => p.id === postId);
-    if (!post) return; // Post might have been deleted
-
-    const userId = user.uid; // Use uid
-    const isAlreadyLiked = post.likedBy?.includes(userId);
-
-    try {
-        await updateDoc(postRef, {
-            likedBy: isAlreadyLiked ? arrayRemove(userId) : arrayUnion(userId),
-            likes: increment(isAlreadyLiked ? -1 : 1)
-        });
-         // No need to update local state, onSnapshot will handle it
-    } catch (error) {
-        console.error("Error liking/unliking post:", error);
-    }
-  };
-
-  const handleCommentPost = async (postId, commentText) => {
-    // Use user.uid
-    if (!user?.uid) return alert("Please log in to comment.");
-    if (!commentText.trim()) return; // Don't post empty comments
-
-    try {
-        const commentsCollectionRef = collection(db, 'posts', postId, 'comments');
-        await addDoc(commentsCollectionRef, {
-            text: commentText,
-            // Use user.uid
-            user: { name: user.name, avatar: user.picture, userId: user.uid },
-            timestamp: serverTimestamp(),
-        });
-        // Update comment count on the post document
-        const postRef = doc(db, 'posts', postId);
-        await updateDoc(postRef, { comments: increment(1) });
-         // Let onSnapshot update the UI
-    } catch (error) {
-        console.error("Error posting comment: ", error);
-        alert("Failed to post comment. Please try again.");
-    }
-  };
-
-    const handleDeleteComment = async (postId, commentId, commentUserId) => {
-    // Use user.uid for check
-    if (!user?.uid || user.uid !== commentUserId) {
-        alert("You can only delete your own comments.");
-        return;
+    const handleRegister = async () => {
+        if (isRegistered || isPast) return;
+        
+        const tournamentRef = doc(db, 'tournaments', tournament.id);
+        try {
+            await updateDoc(tournamentRef, {
+                participants: arrayUnion(user.uid)
+            });
+        } catch (error) {
+            console.error("Error registering for tournament:", error);
+            // Add user-friendly error handling here
+        }
     };
-    if (!window.confirm("Are you sure you want to delete this comment?")) return;
 
-    try {
-      const commentRef = doc(db, 'posts', postId, 'comments', commentId);
-      await deleteDoc(commentRef);
-      // Decrement comment count on the post document
-      const postRef = doc(db, 'posts', postId);
-      await updateDoc(postRef, {
-        comments: increment(-1)
-      });
-       // Let onSnapshot update the UI
-    } catch (error) {
-      console.error("Error deleting comment: ", error);
-      alert("Failed to delete comment.");
-    }
-  };
+    const handleWithdraw = async () => {
+        if (!isRegistered || isPast) return;
+        
+        const tournamentRef = doc(db, 'tournaments', tournament.id);
+        try {
+            await updateDoc(tournamentRef, {
+                participants: arrayRemove(user.uid)
+            });
+        } catch (error) {
+            console.error("Error withdrawing from tournament:", error);
+            // Add user-friendly error handling here
+        }
+    };
 
+    const formatDate = (timestamp) => {
+        if (!timestamp) return 'TBA';
+        return timestamp.toDate().toLocaleDateString('en-IN');
+    };
 
-  return (
-    <div className="feed-container">
-      {/* Pass user object which now includes uid */}
-      <CreatePost user={user} onCreatePost={handleCreatePost} />
-      {loading ? (
-        <p>Loading feed...</p>
-      ) : posts.length > 0 ? (
-        posts.map(post => (
-          <PostCard
-            key={post.id}
-            post={post}
-            user={user} // Pass user object which now includes uid
-            onLike={handleLikePost}
-            onDelete={handleDeletePost}
-            onComment={handleCommentPost}
-            onDeleteComment={handleDeleteComment} // Pass down delete comment handler
-          />
-        ))
-      ) : (
-        <p>No posts yet. Be the first to share something!</p>
-      )}
-    </div>
-  );
+    return (
+        <div className={`tournament-card ${isPast ? 'past-tournament' : ''}`}>
+            <h2>{tournament.name}</h2>
+            <div className="tournament-details">
+                <span><strong>Sport:</strong> {tournament.sport}</span>
+                <span><strong>Location:</strong> {tournament.location}</span>
+                <span><strong>Starts:</strong> {formatDate(tournament.startDate)}</span>
+                <span><strong>Ends:</strong> {formatDate(tournament.endDate)}</span>
+            </div>
+            <p className="tournament-desc">{tournament.description}</p>
+            
+            <div className="tournament-actions">
+                {isPast ? (
+                    <button className="registered-btn" disabled>Completed</button>
+                ) : isRegistered ? (
+                    <button className="registered-btn" onClick={handleWithdraw}>You are Registered (Withdraw?)</button>
+                ) : (
+                    <button className="register-btn" onClick={handleRegister}>Register Now</button>
+                )}
+            </div>
+        </div>
+    );
 };
 
-export default Feed;
+const Tournaments = ({ user }) => {
+    const [allTournaments, setAllTournaments] = useState([]);
+    const [filteredTournaments, setFilteredTournaments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filters, setFilters] = useState({ states: [], sports: [] });
+    const [activeTab, setActiveTab] = useState('active'); // 'active' or 'past'
 
+    useEffect(() => {
+        setLoading(true);
+        const now = Timestamp.now();
+        
+        let q;
+        if (activeTab === 'active') {
+            q = query(
+                collection(db, 'tournaments'),
+                where('endDate', '>=', now),
+                orderBy('endDate', 'asc')
+            );
+        } else { // 'past'
+             q = query(
+                collection(db, 'tournaments'),
+                where('endDate', '<', now),
+                orderBy('endDate', 'desc')
+            );
+        }
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const tournamentsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setAllTournaments(tournamentsData);
+            setFilteredTournaments(tournamentsData); // Initially show all
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching tournaments: ", error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [activeTab]); // Refetch when tab changes
+
+    // Memoized filtering logic
+    useEffect(() => {
+        const results = allTournaments.filter(t => {
+            const stateMatch = filters.states.length === 0 || filters.states.includes(t.location?.split(', ')[1]);
+            const sportMatch = filters.sports.length === 0 || filters.sports.includes(t.sport);
+            return stateMatch && sportMatch;
+        });
+        setFilteredTournaments(results);
+    }, [filters, allTournaments]);
+
+    const handleFilterChange = useCallback((newFilters) => {
+        setFilters(newFilters);
+    }, []);
+
+    return (
+        <div className="tournaments-page-container">
+            <FilterBar 
+                allTournaments={allTournaments} 
+                onFilterChange={handleFilterChange} 
+            />
+            <div className="tournaments-content">
+                <div className="tournaments-tabs">
+                    <button 
+                        className={activeTab === 'active' ? 'active' : ''} 
+                        onClick={() => setActiveTab('active')}
+                    >
+                        Upcoming & Active
+                    </button>
+                    <button 
+                        className={activeTab === 'past' ? 'active' : ''} 
+                        onClick={() => setActiveTab('past')}
+                    >
+                        Past Tournaments
+                    </button>
+                </div>
+
+                <div className="tournaments-list">
+                    {loading ? (
+                        <p className="loading-text">Loading tournaments...</p>
+                    ) : filteredTournaments.length > 0 ? (
+                        filteredTournaments.map(tournament => (
+                            <TournamentCard key={tournament.id} tournament={tournament} user={user} />
+                        ))
+                    ) : (
+                        <p className="loading-text">No tournaments found matching your criteria.</p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Tournaments;

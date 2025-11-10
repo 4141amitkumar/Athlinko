@@ -1,19 +1,47 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Sun, Moon, LogOut, User as UserIcon, Bell, Trophy, Users, MessageSquare, HelpCircle, Home, UserPlus, Search, Star } from 'lucide-react';
-import { auth, db } from '../firebase'; // Import auth
-import { collection, query, where, onSnapshot, getDocs, orderBy, doc, updateDoc, serverTimestamp, writeBatch, arrayUnion } from 'firebase/firestore';
+import { auth, db } from '../firebase';
+import { collection, query, where, onSnapshot, getDocs, orderBy, doc, updateDoc, serverTimestamp, writeBatch, arrayUnion, limit } from 'firebase/firestore';
 import RequestsDropdown from './RequestsDropdown';
+import { createNotification } from '../utils/notifications'; // Import the new helper
 import './NavBar.css';
 
-// Pass setUser prop for logout functionality
+// Timestamp format karne ke liye helper
+const formatTimeAgo = (timestamp) => {
+    if (!timestamp?.toDate) return 'Just now';
+    try {
+        const now = new Date();
+        const date = timestamp.toDate();
+        const seconds = Math.floor((now - date) / 1000);
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + "y ago";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + "mo ago";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + "d ago";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + "h ago";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + "m ago";
+        return Math.floor(seconds) + "s ago";
+    } catch (e) {
+        return 'Just now';
+    }
+};
+
 const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showRequests, setShowRequests] = useState(false);
+  
+  // Real notifications ke liye naya state
   const [notifications, setNotifications] = useState([]);
+  const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
+
   const [connectionRequests, setConnectionRequests] = useState([]);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
   const requestsRef = useRef(null);
@@ -31,25 +59,32 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
   }, []);
 
   useEffect(() => {
-    // Add check for user and user.uid before running queries
     if (!user?.uid) {
       setNotifications([]);
       setConnectionRequests([]);
       setUnreadMessagesCount(0);
-      return; // Exit early if user or user.uid is not available
+      setUnreadNotifsCount(0); // Reset count
+      return; 
     }
 
-    // Fetch active tournaments
-    const fetchActiveTournaments = async () => {
-      try {
-        const now = new Date();
-        const q = query(collection(db, "tournaments"), where("endDate", ">=", now), orderBy("endDate", "asc"));
-        const querySnapshot = await getDocs(q);
-        setNotifications(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (error) { console.error("Error fetching tournaments:", error); }
-    };
+    // --- Naya Notification Listener ---
+    // User ke 'notifications' subcollection ko sunein
+    const notifsQuery = query(
+        collection(db, 'users', user.uid, 'notifications'), 
+        orderBy('timestamp', 'desc'), 
+        limit(20) // Sirf latest 20 dikhayein
+    );
+    const unsubscribeNotifs = onSnapshot(notifsQuery, (snapshot) => {
+        const notifsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setNotifications(notifsData);
+        // Unread count calculate karein
+        const unreadCount = notifsData.filter(n => !n.isRead).length;
+        setUnreadNotifsCount(unreadCount);
+    }, (error) => {
+        console.error("Error fetching notifications:", error);
+    });
 
-    // Listen for incoming connection requests - Use user.uid
+    // --- Connection Requests Listener (Pehle jaisa) ---
     const requestsQuery = query(collection(db, 'requests'), where('receiverId', '==', user.uid), where('status', '==', 'pending'));
     const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
       setConnectionRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -57,20 +92,24 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
         console.error("Error fetching connection requests:", error); // Add error handling
     });
 
-    // Listen for unread messages - Use user.uid
+    // --- Unread Messages Listener (Pehle jaisa) ---
     const convosQuery = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
     const unsubscribeConversations = onSnapshot(convosQuery, (snapshot) => {
       let unreadCount = 0;
       snapshot.forEach(doc => {
         const convo = doc.data();
-        // Ensure participantInfo and user.uid exist before accessing
         const lastRead = convo.participantInfo?.[user.uid]?.lastRead?.toDate();
         const lastMessageTime = convo.lastMessageTimestamp?.toDate();
-        // Check if lastMessage exists and potentially modify logic if needed
-        if (lastRead && lastMessageTime && lastMessageTime > lastRead) {
-          unreadCount++;
-        } else if (!lastRead && convo.lastMessage) { // This condition might need adjustment based on data structure
-          unreadCount++;
+        
+        // Check if lastMessage exists AND was not sent by the current user
+        const lastMessageSender = convo.lastMessageSenderId; 
+        
+        if (lastMessageSender !== user.uid) {
+            if (lastRead && lastMessageTime && lastMessageTime > lastRead) {
+              unreadCount++;
+            } else if (!lastRead && convo.lastMessage) { 
+              unreadCount++;
+            }
         }
       });
       setUnreadMessagesCount(unreadCount);
@@ -78,20 +117,19 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
         console.error("Error fetching conversations:", error); // Add error handling
     });
 
-    fetchActiveTournaments();
 
     return () => {
+      unsubscribeNotifs(); // Naye listener ko clean up karein
       unsubscribeRequests();
       unsubscribeConversations();
     };
   }, [user]); // Depend on the whole user object
 
   const handleLogout = () => {
-    auth.signOut() // Use Firebase auth signOut
+    auth.signOut() 
       .then(() => {
-        setUser(null); // Update local state via prop from App.js
+        setUser(null); 
         setShowDropdown(false);
-        // No need for localStorage removal if using onAuthStateChanged
         navigate('/');
       })
       .catch((error) => {
@@ -100,34 +138,69 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
   };
 
   const handleViewProfile = () => {
-      // Use user.uid
       if (user?.uid) {
           navigate(`/profile/${user.uid}`);
           setShowDropdown(false);
       }
   };
+  
+  // Naya function: Notification par click handle karein
+  const handleNotificationClick = async (notif) => {
+    // Navigate to link
+    navigate(notif.link);
+    setShowNotifications(false);
+    
+    // Mark as read (agar read nahi hai toh)
+    if (!notif.isRead) {
+        try {
+            const notifRef = doc(db, 'users', user.uid, 'notifications', notif.id);
+            await updateDoc(notifRef, { isRead: true });
+        } catch (error) {
+            console.error("Error marking notification as read:", error);
+        }
+    }
+  };
 
+  // *** YEH RAHA FIX ***
   const handleAcceptRequest = async (request) => {
-      // Ensure user.uid is available
       if (!user?.uid) return;
+      
+      console.log("Accepting request...", request.id);
       const batch = writeBatch(db);
+      
+      // 1. Request document ko update karein
       const requestRef = doc(db, 'requests', request.id);
       batch.update(requestRef, { status: 'accepted', updatedAt: serverTimestamp() });
-      const currentUserRef = doc(db, 'users', request.receiverId); // receiverId should be the current user's uid
+      
+      // 2. Current user (receiver) ki connection list update karein
+      const currentUserRef = doc(db, 'users', request.receiverId); 
       batch.update(currentUserRef, { connections: arrayUnion(request.senderId) });
-      const senderUserRef = doc(db, 'users', request.senderId);
-      batch.update(senderUserRef, { connections: arrayUnion(request.receiverId) }); // Use receiverId
+      
+      // 3. Sender ki list update karne waali line HATA DI GAYI hai
+      // const senderUserRef = doc(db, 'users', request.senderId);
+      // batch.update(senderUserRef, { connections: arrayUnion(request.receiverId) }); // <-- YEH LINE PROBLEM THI
+
       try {
-          await batch.commit();
-          // Optional: Update local state immediately if needed, though listener should catch it
-      } catch (error) { console.error("Error accepting request:", error); }
+          await batch.commit(); // Ab yeh batch successful hoga
+          console.log("Request accepted, batch committed.");
+          
+          // 4. Sender ko notification bhejein (batch ke baad)
+          await createNotification(
+              request.senderId, 
+              `${user.name} accepted your connection request.`, 
+              `/profile/${user.uid}`
+          );
+          console.log("Notification sent to sender.");
+
+      } catch (error) { 
+          console.error("Error accepting request (batch commit failed):", error); 
+      }
   };
 
   const handleRejectRequest = async (requestId) => {
       const requestRef = doc(db, 'requests', requestId);
       try {
           await updateDoc(requestRef, { status: 'rejected', updatedAt: serverTimestamp() });
-          // Optional: Update local state immediately if needed, though listener should catch it
       } catch (error) { console.error("Error rejecting request:", error); }
   };
 
@@ -138,7 +211,6 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
 
         {user && (
           <div className="navbar-menu">
-            {/* Navigation Links remain the same */}
             <Link to="/feed" className={`nav-item ${location.pathname === '/feed' ? 'active' : ''}`}><Home size={18}/><span>Feed</span></Link>
             <Link to="/search" className={`nav-item ${location.pathname.startsWith('/search') ? 'active' : ''}`}><Search size={18}/><span>Search</span></Link>
             <Link to="/groups" className={`nav-item ${location.pathname.startsWith('/groups') ? 'active' : ''}`}><Users size={18}/><span>Communities</span></Link>
@@ -167,28 +239,26 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
                   <UserPlus size={22} />
                   {connectionRequests.length > 0 && <span className="notification-badge">{connectionRequests.length}</span>}
                 </button>
-                 {/* Pass user.uid to RequestsDropdown if needed, though actions are handled here */}
                 {showRequests && <RequestsDropdown requests={connectionRequests} onAccept={handleAcceptRequest} onReject={handleRejectRequest} />}
               </div>
 
-              {/* Notifications dropdown remains the same */}
+              {/* --- Real Notification Dropdown --- */}
                <div className="notification-container" ref={notificationRef}>
                 <button className="action-btn notification-bell" onClick={() => setShowNotifications(!showNotifications)}>
                   <Bell size={22} />
-                  {notifications.length > 0 && <span className="notification-badge">{notifications.length}</span>}
+                  {unreadNotifsCount > 0 && <span className="notification-badge">{unreadNotifsCount}</span>}
                 </button>
                 {showNotifications && (
                   <div className="notification-dropdown">
-                    <div className="notification-header"><h3>Active Tournaments</h3></div>
+                    <div className="notification-header"><h3>Notifications</h3></div>
                     <div className="notification-list">
-                      {notifications.length > 0 ? notifications.map(tourney => (
-                        <Link to="/tournaments" key={tourney.id} className="notification-item" onClick={() => setShowNotifications(false)}>
-                          <span className='notification-title'>{tourney.name}</span>
-                          <span className='notification-details'>{tourney.location}</span>
-                        </Link>
-                      )) : (<div className="notification-item empty"><span>No active tournaments.</span></div>)}
+                      {notifications.length > 0 ? notifications.map(notif => (
+                        <div key={notif.id} className={`notification-item ${!notif.isRead ? 'unread' : ''}`} onClick={() => handleNotificationClick(notif)}>
+                          <span className='notification-title'>{notif.text}</span>
+                          <span className='notification-details'>{formatTimeAgo(notif.timestamp)}</span>
+                        </div>
+                      )) : (<div className="notification-item empty"><span>No new notifications.</span></div>)}
                     </div>
-                    <Link to="/tournaments" className="notification-footer" onClick={() => setShowNotifications(false)}>View All Tournaments</Link>
                   </div>
                 )}
               </div>
@@ -202,7 +272,6 @@ const NavBar = ({ darkMode, setDarkMode, user, setUser }) => {
                       <img src={user.picture} alt="User" className="dropdown-pic" />
                       <div className="profile-info">
                         <p className="profile-name">{user.name}</p>
-                        {/* Ensure user.role exists */}
                         <p className="profile-role">{user.role}</p>
                       </div>
                     </div>

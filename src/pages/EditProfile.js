@@ -19,8 +19,8 @@ const EditProfile = ({ currentUser, setUser }) => {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (currentUser && currentUser.sub) {
-        const userDocRef = doc(db, 'users', currentUser.sub);
+      if (currentUser && currentUser.uid) { // Use uid instead of sub
+        const userDocRef = doc(db, 'users', currentUser.uid); // Use uid instead of sub
         const docSnap = await getDoc(userDocRef);
         if (docSnap.exists()) {
           const userData = docSnap.data();
@@ -49,14 +49,14 @@ const EditProfile = ({ currentUser, setUser }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const userDocRef = doc(db, 'users', currentUser.sub);
+      const userDocRef = doc(db, 'users', currentUser.uid); // Use uid instead of sub
       await updateDoc(userDocRef, formData);
       
       // Poore application ke state ko update karein
       const updatedUser = { ...currentUser, ...formData };
       setUser(updatedUser);
 
-      navigate(`/profile/${currentUser.sub}`); // Save karne ke baad profile par wapas bhej dein
+      navigate(`/profile/${currentUser.uid}`); // Use uid instead of sub
     } catch (error) {
       console.error("Error updating profile: ", error);
     } finally {
@@ -97,7 +97,7 @@ const EditProfile = ({ currentUser, setUser }) => {
         
         <div className="form-actions">
           <button type="submit" className="save-btn" disabled={loading}>{loading ? 'Saving...' : 'Save Changes'}</button>
-          <button type="button" className="cancel-btn" onClick={() => navigate(`/profile/${currentUser.sub}`)}>Cancel</button>
+          <button type="button" className="cancel-btn" onClick={() => navigate(`/profile/${currentUser.uid}`)}>Cancel</button>
         </div>
       </form>
     </div>

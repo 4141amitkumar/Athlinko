@@ -1,9 +1,104 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, query, orderBy, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { Edit, Trash2 } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
 import './PlayerStats.css';
+
+// Helper: Cricket Stats ko process karna
+const processCricketStats = (perfs) => {
+    let matches = 0;
+    let totalRuns = 0;
+    let totalBalls = 0;
+    let totalWickets = 0;
+    let halfCenturies = 0;
+    let centuries = 0;
+    let highScore = 0;
+    
+    // Chart data ke liye, match-by-match runs
+    const chartData = perfs.map((p, index) => {
+        const runs = parseInt(p.stats.runsScored, 10) || 0;
+        const wickets = parseInt(p.stats.wicketsTaken, 10) || 0;
+        
+        // Summary calculations
+        matches++;
+        totalRuns += runs;
+        totalBalls += parseInt(p.stats.ballsFaced, 10) || 0;
+        totalWickets += wickets;
+        if (runs >= 100) centuries++;
+        else if (runs >= 50) halfCenturies++;
+        if (runs > highScore) highScore = runs;
+
+        return {
+            name: `Match ${index + 1}`, // Simple name for X-axis
+            Runs: runs,
+            Wickets: wickets,
+            opponent: p.opponent,
+            date: p.matchDate
+        };
+    }).reverse(); // Taaki chart left-to-right puraana se naya dikhaye
+
+    const strikeRate = totalBalls > 0 ? ((totalRuns / totalBalls) * 100).toFixed(2) : '0.00';
+
+    const summary = [
+        { name: 'Matches', value: matches },
+        { name: 'Total Runs', value: totalRuns },
+        { name: 'High Score', value: highScore },
+        { name: 'Strike Rate', value: strikeRate },
+        { name: '100s', value: centuries },
+        { name: '50s', value: halfCenturies },
+        { name: 'Wickets', value: totalWickets },
+    ];
+    
+    return { summary, chartData };
+};
+
+// Helper: Doosre sports ke stats process karna
+const processMatchStats = (perfs) => {
+    let matches = 0;
+    let wins = 0;
+    let losses = 0;
+    
+    perfs.forEach(p => {
+        matches++;
+        if (p.stats.result === 'loss') losses++;
+        else wins++;
+    });
+    
+    // Bar chart ke liye data
+    const chartData = [
+        { name: 'Wins', value: wins, fill: '#28a745' },
+        { name: 'Losses', value: losses, fill: '#dc3545' }
+    ];
+
+    const summary = [
+        { name: 'Matches', value: matches },
+        { name: 'Wins', value: wins },
+        { name: 'Losses', value: losses },
+    ];
+
+    return { summary, chartData };
+};
+
+// Custom Tooltip jo graph par hover karne par dikhega
+const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        return (
+            <div className="custom-tooltip">
+                <p className="label">{`${data.date} vs ${data.opponent}`}</p>
+                {payload.map(pld => (
+                     <p key={pld.dataKey} style={{ color: pld.color }}>
+                        {`${pld.dataKey}: ${pld.value}`}
+                     </p>
+                ))}
+            </div>
+        );
+    }
+    return null;
+};
+
 
 const PlayerStats = ({ userId, isOwnProfile, primarySport }) => {
     const [performances, setPerformances] = useState([]);
@@ -15,7 +110,7 @@ const PlayerStats = ({ userId, isOwnProfile, primarySport }) => {
 
         const performancesQuery = query(
             collection(db, 'users', userId, 'performances'),
-            orderBy('matchDate', 'desc')
+            orderBy('matchDate', 'desc') // Naya data pehle
         );
 
         const unsubscribe = onSnapshot(performancesQuery, (snapshot) => {
@@ -44,140 +139,138 @@ const PlayerStats = ({ userId, isOwnProfile, primarySport }) => {
             alert("Failed to delete the record. Please try again.");
         }
     };
-
-    const groupedBySport = performances.reduce((acc, perf) => {
-        const sport = perf.sport || 'other';
-        if (!acc[sport]) {
-            acc[sport] = [];
-        }
-        acc[sport].push(perf);
-        return acc;
-    }, {});
     
-    // Move primary sport to the top
+    // useMemo ka istemaal taaki data har render par re-calculate na ho
+    const groupedBySport = useMemo(() => {
+        const groups = performances.reduce((acc, perf) => {
+            const sport = perf.sport || 'other';
+            if (!acc[sport]) acc[sport] = [];
+            acc[sport].push(perf);
+            return acc;
+        }, {});
+        
+        // Har group ke andar stats ko process karein
+        Object.keys(groups).forEach(sport => {
+            let processedData;
+            if (sport === 'cricket') {
+                processedData = processCricketStats(groups[sport]);
+            } else if (['badminton', 'boxing'].includes(sport)) {
+                processedData = processMatchStats(groups[sport]);
+            }
+            // Add more sport processors here...
+            
+            groups[sport] = {
+                raw: groups[sport], // original data
+                processed: processedData // summary and chart data
+            };
+        });
+        
+        return groups;
+    }, [performances]);
+    
     const sortedSports = Object.keys(groupedBySport).sort((a, b) => {
         if (a === primarySport) return -1;
         if (b === primarySport) return 1;
         return a.localeCompare(b);
     });
 
-    const renderSummary = (sport, perfs) => {
-        switch (sport) {
-            case 'cricket':
-                const summary = perfs.reduce((acc, p) => {
-                    const runs = parseInt(p.stats.runsScored, 10) || 0;
-                    acc.totalRuns += runs;
-                    acc.totalBalls += parseInt(p.stats.ballsFaced, 10) || 0;
-                    acc.totalWickets += parseInt(p.stats.wicketsTaken, 10) || 0;
-                    if (runs >= 100) acc.centuries++;
-                    else if (runs >= 50) acc.halfCenturies++;
-                    if (runs > acc.highScore) acc.highScore = runs;
-                    return acc;
-                }, { totalRuns: 0, totalBalls: 0, totalWickets: 0, halfCenturies: 0, centuries: 0, highScore: 0 });
-
-                const strikeRate = summary.totalBalls > 0 ? ((summary.totalRuns / summary.totalBalls) * 100).toFixed(2) : '0.00';
-                
-                return (
-                    <div className="stats-summary">
-                        <div className="summary-card"><span>{perfs.length}</span><p>Matches</p></div>
-                        <div className="summary-card"><span>{summary.totalRuns}</span><p>Total Runs</p></div>
-                        <div className="summary-card"><span>{summary.highScore}</span><p>High Score</p></div>
-                        <div className="summary-card"><span>{strikeRate}</span><p>Strike Rate</p></div>
-                        <div className="summary-card"><span>{summary.centuries}</span><p>100s</p></div>
-                        <div className="summary-card"><span>{summary.halfCenturies}</span><p>50s</p></div>
-                        <div className="summary-card"><span>{summary.totalWickets}</span><p>Wickets</p></div>
-                    </div>
-                );
-            
-            case 'boxing':
-            case 'badminton':
-                const matchSummary = perfs.reduce((acc, p) => {
-                    if (p.stats.result === 'loss') {
-                        acc.losses++;
-                    } else {
-                        acc.wins++;
-                    }
-                    return acc;
-                }, { wins: 0, losses: 0 });
-
-                return (
-                    <div className="stats-summary">
-                        <div className="summary-card"><span>{perfs.length}</span><p>Matches</p></div>
-                        <div className="summary-card"><span>{matchSummary.wins}</span><p>Wins</p></div>
-                        <div className="summary-card"><span>{matchSummary.losses}</span><p>Losses</p></div>
-                    </div>
-                );
-            
-            case 'football':
-                const footballSummary = perfs.reduce((acc, p) => {
-                    acc.goals += parseInt(p.stats.goals, 10) || 0;
-                    acc.assists += parseInt(p.stats.assists, 10) || 0;
-                    return acc;
-                }, { goals: 0, assists: 0 });
-
-                return (
-                    <div className="stats-summary">
-                        <div className="summary-card"><span>{perfs.length}</span><p>Matches</p></div>
-                        <div className="summary-card"><span>{footballSummary.goals}</span><p>Goals</p></div>
-                        <div className="summary-card"><span>{footballSummary.assists}</span><p>Assists</p></div>
-                    </div>
-                );
-
-            default: return null;
-        }
-    };
-
     if (loading) return <p>Loading stats...</p>;
     if (performances.length === 0) return <p>No performance data has been added yet.</p>;
 
     return (
         <div className="player-stats-container">
-            {sortedSports.map(sport => (
-                <div key={sport} className="sport-section">
-                    <h3>{sport.charAt(0).toUpperCase() + sport.slice(1)} Career</h3>
-                    {renderSummary(sport, groupedBySport[sport])}
-                    
-                    <h4>Match by Match History</h4>
-                    <div className="table-wrapper">
-                        <table className="stats-table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Opponent/Event</th>
-                                    {sport === 'cricket' && <><th>Runs</th><th>Wickets</th></>}
-                                    {sport === 'football' && <><th>Goals</th><th>Assists</th></>}
-                                    {(sport === 'boxing' || sport === 'badminton') && <><th>Result</th><th>Details</th></>}
-                                    {(sport === 'athletics' || sport === 'swimming') && <><th>Mark/Time</th><th>Rank</th></>}
-                                    <th>Tournament</th>
-                                    {isOwnProfile && <th>Actions</th>}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {groupedBySport[sport].map(perf => (
-                                    <tr key={perf.id}>
-                                        <td>{perf.matchDate}</td>
-                                        <td>{perf.opponent}</td>
-                                        {sport === 'cricket' && <><td>{perf.stats.runsScored || '-'} ({perf.stats.ballsFaced || '0'})</td><td>{perf.stats.wicketsTaken || '-'}/{perf.stats.oversBowled || '0'}</td></>}
-                                        {sport === 'football' && <><td>{perf.stats.goals || '0'}</td><td>{perf.stats.assists || '0'}</td></>}
-                                        {(sport === 'boxing' || sport === 'badminton') && <><td className={perf.stats.result === 'loss' ? 'loss' : 'win'}>{perf.stats.result || 'Win'}</td><td>{perf.stats.score || perf.stats.method}</td></>}
-                                        {(sport === 'athletics' || sport === 'swimming') && <><td>{perf.stats.mark || perf.stats.time}</td><td>{perf.stats.rank || '-'}</td></>}
-                                        <td>{perf.tournament}</td>
-                                        {isOwnProfile && (
-                                            <td className="actions-cell">
-                                                <button onClick={() => navigate(`/edit-performance/${perf.id}`)} className="action-btn edit-btn" aria-label="Edit"><Edit size={16} /></button>
-                                                <button onClick={() => handleDelete(perf.id)} className="action-btn delete-btn" aria-label="Delete"><Trash2 size={16} /></button>
-                                            </td>
-                                        )}
-                                    </tr>
+            {sortedSports.map(sport => {
+                const { raw: perfs, processed } = groupedBySport[sport];
+                
+                return (
+                    <div key={sport} className="sport-section">
+                        <h3>{sport.charAt(0).toUpperCase() + sport.slice(1)} Career</h3>
+                        
+                        {/* --- Summary Cards --- */}
+                        {processed?.summary && (
+                            <div className="stats-summary">
+                                {processed.summary.map(item => (
+                                    <div className="summary-card" key={item.name}>
+                                        <span>{item.value}</span>
+                                        <p>{item.name}</p>
+                                    </div>
                                 ))}
-                            </tbody>
-                        </table>
+                            </div>
+                        )}
+
+                        {/* --- Charts --- */}
+                        {sport === 'cricket' && processed?.chartData.length > 0 && (
+                            <div className="chart-container">
+                                <h4>Performance Over Time (Last {processed.chartData.length} Matches)</h4>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <LineChart data={processed.chartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
+                                        <XAxis dataKey="name" stroke="#666" />
+                                        <YAxis yAxisId="left" stroke="#8B0000" />
+                                        <YAxis yAxisId="right" orientation="right" stroke="#28a745" />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        <Line yAxisId="left" type="monotone" dataKey="Runs" stroke="#8B0000" activeDot={{ r: 8 }} />
+                                        <Line yAxisId="right" type="monotone" dataKey="Wickets" stroke="#28a745" />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        )}
+                        
+                        {(sport === 'badminton' || sport === 'boxing') && processed?.chartData.length > 0 && (
+                             <div className="chart-container">
+                                <h4>Career Win/Loss</h4>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart data={processed.chartData} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
+                                        <XAxis type="number" stroke="#666" />
+                                        <YAxis dataKey="name" type="category" stroke="#666" />
+                                        <Tooltip />
+                                        <Bar dataKey="value" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                             </div>
+                        )}
+
+                        {/* --- Match History Table (Ab bhi zaroori hai details ke liye) --- */}
+                        <h4>Match by Match History</h4>
+                        <div className="table-wrapper">
+                            <table className="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Opponent/Event</th>
+                                        {/* Dynamic headers based on sport */}
+                                        {Object.keys(perfs[0].stats).map(statKey => <th key={statKey}>{statKey.replace(/([A-Z])/g, ' $1')}</th>)}
+                                        {isOwnProfile && <th>Actions</th>}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {perfs.map(perf => (
+                                        <tr key={perf.id}>
+                                            <td>{perf.matchDate}</td>
+                                            <td>{perf.opponent}</td>
+                                            {Object.keys(perfs[0].stats).map(statKey => (
+                                                <td key={statKey} className={perf.stats[statKey] === 'loss' ? 'loss' : perf.stats[statKey] === 'win' ? 'win' : ''}>
+                                                    {perf.stats[statKey] || '-'}
+                                                </td>
+                                            ))}
+                                            {isOwnProfile && (
+                                                <td className="actions-cell">
+                                                    <button onClick={() => navigate(`/edit-performance/${perf.id}`)} className="action-btn edit-btn" aria-label="Edit"><Edit size={16} /></button>
+                                                    <button onClick={() => handleDelete(perf.id)} className="action-btn delete-btn" aria-label="Delete"><Trash2 size={16} /></button>
+                                                </td>
+                                            )}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
-            ))}
+                );
+            })}
         </div>
     );
 };
 
 export default PlayerStats;
-

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { auth, db, rtdb } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore'; // onSnapshot import karein
 import { ref, onDisconnect, set, serverTimestamp, goOffline, goOnline, onValue } from 'firebase/database';
 
 // Import Pages and Components
@@ -27,7 +27,6 @@ import './App.css';
 
 // --- Presence Management ---
 const setupPresence = (userId) => {
-    // ... (presence setup code remains the same as previous version)
     if (!userId || !rtdb) {
         console.warn("RTDB not initialized or userId missing for presence setup.");
         return () => {}; // Return a no-op cleanup function
@@ -40,7 +39,6 @@ const setupPresence = (userId) => {
     const isOnline = { state: 'online', last_changed: serverTimestamp() };
     const isOffline = { state: 'offline', last_changed: serverTimestamp() };
 
-    // Set initial online status and handle disconnect
     const setOnlineAndOnDisconnect = () => {
         set(userStatusRef, isOnline)
             .then(() => {
@@ -51,7 +49,7 @@ const setupPresence = (userId) => {
                  console.log(`onDisconnect handler set for user ${userId}.`);
             })
             .catch((err) => console.error("Error setting online status or onDisconnect:", err));
-        goOnline(rtdb); // Ensure RTDB connection is active
+        goOnline(rtdb); 
     };
 
     const unsubscribePresence = onValue(connectedRef, (snap) => {
@@ -63,10 +61,8 @@ const setupPresence = (userId) => {
         }
     });
 
-     // Initial attempt to set online status
      setOnlineAndOnDisconnect();
 
-    // Return cleanup function
     return () => {
         console.log(`Cleaning up presence for user: ${userId}`);
         unsubscribePresence();
@@ -84,85 +80,76 @@ function App() {
     const [darkMode, setDarkMode] = useState(() => {
         return localStorage.getItem('darkMode') === 'true';
     });
-    const [user, setUser] = useState(null); // Initialize user as null
-    const [authChecked, setAuthChecked] = useState(false); // Tracks if initial auth check is done
+    const [user, setUser] = useState(null); 
+    const [authChecked, setAuthChecked] = useState(false); 
 
-    // --- Central Auth Listener ---
+    // --- Central Auth & User Data Listener ---
     useEffect(() => {
         let presenceUnsubscribe = null;
-        let isMounted = true; // Flag to prevent state updates after unmount
+        let unsubscribeUserDoc = null; // Naya listener user ke document ke liye
 
-        console.log("Setting up Auth listener...");
-
-        const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
             console.log("Auth State Changed. User:", firebaseUser ? firebaseUser.uid : 'null');
-
-            // --- Cleanup previous presence listener ---
-            if (presenceUnsubscribe) {
-                presenceUnsubscribe();
-                presenceUnsubscribe = null;
-                console.log("Cleaned up previous presence listener.");
-            }
-
-            let finalUser = null; // Variable to hold the user state determined in this callback
+            
+            // Puraane listeners ko clean up karein
+            if (unsubscribeUserDoc) unsubscribeUserDoc();
+            if (presenceUnsubscribe) presenceUnsubscribe();
 
             if (firebaseUser) {
                 const userRef = doc(db, "users", firebaseUser.uid);
-                try {
-                    console.log("Fetching Firestore data for UID:", firebaseUser.uid);
-                    const docSnap = await getDoc(userRef);
-
+                
+                // *** YEH HAI NAYA FIX ***
+                // User ke document mein real-time changes ko sunein
+                unsubscribeUserDoc = onSnapshot(userRef, (docSnap) => {
                     if (docSnap.exists()) {
-                        console.log("Firestore data found.");
+                        console.log("Real-time user data updated.");
                         const userData = {
                             uid: firebaseUser.uid,
                             email: firebaseUser.email,
                             ...docSnap.data(),
                             name: docSnap.data().name || firebaseUser.displayName || 'User',
                             picture: docSnap.data().picture || firebaseUser.photoURL || 'https://via.placeholder.com/40',
-                            sub: firebaseUser.uid
                         };
-                        finalUser = userData; // Set the user object
-                        console.log("User data prepared:", userData.uid);
+                        
+                        setUser(userData); // Yahaan state set karein
+                        setAuthChecked(true);
+
+                        // (Re)setup presence
+                        if (presenceUnsubscribe) presenceUnsubscribe(); 
                         presenceUnsubscribe = setupPresence(firebaseUser.uid);
+
                     } else {
+                        // User Auth mein hai, par Firestore mein nahi (Register page par hona chahiye)
                         console.warn("User authenticated but no Firestore profile found:", firebaseUser.uid);
-                        finalUser = null; // Keep user null
+                        setUser(null); 
+                        setAuthChecked(true);
                         if (rtdb) goOffline(rtdb);
                     }
-                } catch (error) {
-                    console.error("Error fetching Firestore user data:", error);
-                    finalUser = null; // Error fetching data, treat as logged out
+                }, (error) => {
+                    // Agar listener mein error aaye
+                    console.error("Error listening to user document:", error);
+                    setUser(null);
+                    setAuthChecked(true);
                     if (rtdb) goOffline(rtdb);
-                }
+                });
+                
             } else {
+                // User logged out hai
                 console.log("User signed out.");
-                finalUser = null; // Explicitly null for logged out state
+                setUser(null); 
+                setAuthChecked(true);
                 if (rtdb) goOffline(rtdb);
-            }
-
-            // --- Update state only if component is still mounted ---
-            if (isMounted) {
-                setUser(finalUser); // Update user state
-                setAuthChecked(true); // Mark initial check complete
-                console.log("Initial auth check complete. AuthChecked:", true, "User State determined:", finalUser ? finalUser.uid : finalUser);
-            } else {
-                 console.log("Component unmounted before auth state could be set.");
             }
         });
 
-        // Cleanup function
+        // Jab component unmount ho toh saare listeners band karein
         return () => {
-            console.log("Cleaning up Auth listener (component unmount).");
-            isMounted = false; // Set flag to prevent state updates
+            console.log("Cleaning up all listeners (component unmount).");
             unsubscribeAuth();
-            if (presenceUnsubscribe) {
-                presenceUnsubscribe();
-                console.log("Presence listener cleaned up in Auth cleanup.");
-            }
+            if (unsubscribeUserDoc) unsubscribeUserDoc();
+            if (presenceUnsubscribe) presenceUnsubscribe();
         };
-        // Intentionally empty: Run only once on mount
-    }, []); // <-- Correctly placed empty dependency array
+    }, []); // Yeh useEffect sirf ek baar mount par chalega
 
     // Dark Mode Effect
     useEffect(() => {
@@ -170,7 +157,6 @@ function App() {
         document.body.className = darkMode ? 'dark' : '';
     }, [darkMode]);
 
-    // Loading State UI - Shows until the initial onAuthStateChanged check completes
     if (!authChecked) {
         console.log("Showing loading screen: Auth not checked yet.");
         return (
@@ -181,8 +167,6 @@ function App() {
     }
 
     // --- Render Routes ---
-    // Routes render only after authChecked is true
-    console.log(`Rendering Routes: AuthChecked=${authChecked}, User=${user ? user.uid : user}`);
     return (
         <div className={darkMode ? 'dark' : ''}>
             <Router>
@@ -219,4 +203,3 @@ function App() {
 }
 
 export default App;
-

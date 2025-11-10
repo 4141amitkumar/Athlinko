@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, rtdb } from '../firebase'; // RTDB import karein
 import { ref, onValue } from 'firebase/database'; // RTDB functions import karein
-import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, doc, getDoc, updateDoc, writeBatch, getDocs } from 'firebase/firestore'; // getDocs yahan add karein
+import { collection, query, where, onSnapshot, orderBy, addDoc, serverTimestamp, doc, getDoc, updateDoc, writeBatch } from 'firebase/firestore'; 
 import { Send, MessageSquareText, Check, CheckCheck } from 'lucide-react';
+import { createNotification } from '../utils/notifications'; // Notification helper import
 import './Messages.css';
 
 const formatMessageTimestamp = (timestamp) => {
@@ -32,7 +33,7 @@ const Messages = ({ currentUser }) => {
         setLoading(true);
         const q = query(
             collection(db, 'conversations'),
-            where('participants', 'array-contains', currentUser.sub),
+            where('participants', 'array-contains', currentUser.uid), // Use uid
             orderBy('lastMessageTimestamp', 'desc')
         );
 
@@ -58,7 +59,7 @@ const Messages = ({ currentUser }) => {
             const convoSnap = await getDoc(convoRef);
             if (convoSnap.exists()) {
                 const convoData = convoSnap.data();
-                const otherUserId = convoData.participants.find(p => p !== currentUser.sub);
+                const otherUserId = convoData.participants.find(p => p !== currentUser.uid); // Use uid
                 
                 if (otherUserId) {
                     setActiveConversation({ id: conversationId, otherUserId, ...convoData.participantInfo[otherUserId] });
@@ -79,7 +80,7 @@ const Messages = ({ currentUser }) => {
             let updatesMade = false;
             snapshot.forEach(document => {
                 const message = document.data();
-                if (message.senderId !== currentUser.sub && message.status !== 'seen') {
+                if (message.senderId !== currentUser.uid && message.status !== 'seen') { // Use uid
                     const messageRef = doc(db, 'conversations', conversationId, 'messages', document.id);
                     batch.update(messageRef, { status: 'seen' });
                     updatesMade = true;
@@ -87,6 +88,11 @@ const Messages = ({ currentUser }) => {
             });
 
             if (updatesMade) {
+                // lastRead timestamp ko bhi update karein taaki unread count fix ho
+                const convoRef = doc(db, 'conversations', conversationId);
+                batch.update(convoRef, {
+                    [`participantInfo.${currentUser.uid}.lastRead`]: serverTimestamp()
+                });
                 await batch.commit();
             }
         });
@@ -119,30 +125,43 @@ const Messages = ({ currentUser }) => {
         const convoRef = doc(db, 'conversations', conversationId);
         const messagesColRef = collection(convoRef, 'messages');
 
+        const newMsgTimestamp = serverTimestamp();
+
         await addDoc(messagesColRef, {
-            senderId: currentUser.sub,
+            senderId: currentUser.uid, // Use uid
             text: newMessage,
-            timestamp: serverTimestamp(),
+            timestamp: newMsgTimestamp,
             status: 'sent' // Initial status
         });
 
         await updateDoc(convoRef, {
             lastMessage: newMessage,
-            lastMessageTimestamp: serverTimestamp(),
-            [`participantInfo.${currentUser.sub}.lastRead`]: serverTimestamp()
+            lastMessageSenderId: currentUser.uid, // Track karein ki last message kisne bheja
+            lastMessageTimestamp: newMsgTimestamp,
+            [`participantInfo.${currentUser.uid}.lastRead`]: newMsgTimestamp // Sender ne toh padh hi liya
         });
+
+        // ** NOTIFICATION TRIGGER **
+        const otherUserId = activeConversation?.otherUserId;
+        if (otherUserId) {
+            createNotification(
+                otherUserId,
+                `New message from ${currentUser.name}`,
+                `/messages/${conversationId}`
+            );
+        }
 
         setNewMessage('');
     };
     
     const getOtherParticipant = (convo) => {
-        const otherUserId = convo.participants.find(p => p !== currentUser.sub);
+        const otherUserId = convo.participants.find(p => p !== currentUser.uid); // Use uid
         return convo.participantInfo[otherUserId];
     };
     
     // Status ticks render karne ke liye function
     const renderMessageStatus = (msg) => {
-        if (msg.senderId !== currentUser.sub) return null;
+        if (msg.senderId !== currentUser.uid) return null; // Use uid
         if (msg.status === 'seen') {
             return <CheckCheck size={16} className="status-icon seen" />;
         }
@@ -162,9 +181,14 @@ const Messages = ({ currentUser }) => {
                     </div>
                     {loading ? <p style={{textAlign: 'center', padding: '1rem'}}>Loading conversations...</p> : conversations.map(convo => {
                         const otherUser = getOtherParticipant(convo);
-                        const lastRead = convo.participantInfo[currentUser.sub]?.lastRead?.toDate();
+                        if (!otherUser) return null; // Add guard for missing participant info
+                        const lastRead = convo.participantInfo[currentUser.uid]?.lastRead?.toDate(); // Use uid
                         const lastMessageTime = convo.lastMessageTimestamp?.toDate();
-                        const isUnread = lastRead && lastMessageTime && lastMessageTime > lastRead;
+                        
+                        // Check if unread (and not sent by me)
+                        const isUnread = convo.lastMessageSenderId !== currentUser.uid &&
+                                         ((lastRead && lastMessageTime && lastMessageTime > lastRead) || 
+                                          (!lastRead && convo.lastMessage));
 
                         return (
                             <div
@@ -197,7 +221,7 @@ const Messages = ({ currentUser }) => {
                             </div>
                             <div className="messages-area">
                                 {messages.map(msg => (
-                                    <div key={msg.id} className={`message-wrapper ${msg.senderId === currentUser.sub ? 'sent' : 'received'}`}>
+                                    <div key={msg.id} className={`message-wrapper ${msg.senderId === currentUser.uid ? 'sent' : 'received'}`}>
                                         <div className="message-bubble">
                                             <p>{msg.text}</p>
                                         </div>
@@ -232,4 +256,3 @@ const Messages = ({ currentUser }) => {
 };
 
 export default Messages;
-

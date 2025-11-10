@@ -254,8 +254,18 @@
 .notification-item:hover { background-color: #f0f2f5; }
 .notification-item.empty { color: #666; cursor: default; }
 .notification-item.empty:hover { background-color: transparent; }
+
+/* Naya style unread notifications ke liye */
+.notification-item.unread {
+  background-color: #fce8e8; /* Halka red */
+}
+.notification-item.unread:hover {
+  background-color: #fbdcdc; /* Thoda dark hover */
+}
+
+
 .notification-title { font-weight: 600; color: #050505; }
-.notification-details { font-size: 0.85rem; color: #65676b; margin-top: 4px; }
+.notification-details { font-size: 0.85rem; color: #65676B; margin-top: 4px; }
 .notification-footer { display: block; text-align: center; padding: 1rem; font-weight: 600; color: #8B0000; text-decoration: none; border-top: 1px solid #f0f0f0; transition: background-color 0.2s; }
 .notification-footer:hover { background-color: #f0f2f5; }
 
@@ -290,5 +300,14 @@
 .navbar.dark .notification-dropdown { background-color: #2c2c2c; }
 .navbar.dark .notification-header, .navbar.dark .notification-footer { border-color: #444; }
 .navbar.dark .notification-item:hover, .navbar.dark .notification-footer:hover { background-color: #3a3a3a; }
+
+/* Naya dark mode unread style */
+.navbar.dark .notification-item.unread {
+  background-color: #3a0000;
+}
+.navbar.dark .notification-item.unread:hover {
+  background-color: #5c0000;
+}
+
 .navbar.dark .notification-title { color: #f5f5f5; }
 .navbar.dark .notification-details, .navbar.dark .notification-item.empty { color: #aaa; }
