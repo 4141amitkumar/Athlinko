@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { db, storage } from '../firebase';
-import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteDoc } from 'firebase/firestore';
+// Make sure all necessary imports are present
+import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp, arrayUnion, arrayRemove, writeBatch, deleteDoc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Camera, Edit3, UserPlus, UserCheck, Clock, MessageSquare, Star, Award, PlusCircle } from 'lucide-react';
 import PlayerStats from '../components/PlayerStats'; // Import the new component
@@ -279,18 +280,18 @@ const Profile = ({ currentUser, setUser }) => {
 
   const handleMessage = async () => {
     if (!currentUser || !profileUser) return;
+
+    // 1. Create a predictable, sorted conversation ID
     const participants = [currentUser.uid, profileUser.id].sort();
-    const conversationQuery = query(
-        collection(db, 'conversations'),
-        where('participants', '==', participants)
-    );
+    const conversationId = participants.join('_');
+    const convoRef = doc(db, 'conversations', conversationId);
+
     try {
-        const querySnapshot = await getDocs(conversationQuery);
-        if (!querySnapshot.empty) {
-            const conversationId = querySnapshot.docs[0].id;
-            navigate(`/messages/${conversationId}`);
-        } else {
-            const newConversationRef = await addDoc(collection(db, 'conversations'), {
+        const docSnap = await getDoc(convoRef);
+
+        if (!docSnap.exists()) {
+            // 2. If it doesn't exist, create it using setDoc with the new ID
+            await setDoc(convoRef, {
                 participants,
                 participantInfo: {
                     [currentUser.uid]: { name: currentUser.name, picture: currentUser.picture, lastRead: serverTimestamp() },
@@ -300,8 +301,14 @@ const Profile = ({ currentUser, setUser }) => {
                 lastMessageSenderId: null,
                 lastMessageTimestamp: serverTimestamp()
             });
-            navigate(`/messages/${newConversationRef.id}`);
+            console.log("Created new conversation with ID:", conversationId);
+        } else {
+            console.log("Found existing conversation:", conversationId);
         }
+        
+        // 3. Navigate to the conversation
+        navigate(`/messages/${conversationId}`);
+
     } catch (error) {
         console.error("Error finding or creating conversation:", error);
     }

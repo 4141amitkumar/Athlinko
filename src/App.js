@@ -98,10 +98,10 @@ function App() {
             if (firebaseUser) {
                 const userRef = doc(db, "users", firebaseUser.uid);
                 
-                // *** YEH HAI NAYA FIX ***
                 // User ke document mein real-time changes ko sunein
                 unsubscribeUserDoc = onSnapshot(userRef, (docSnap) => {
                     if (docSnap.exists()) {
+                        // --- STATE 1: User is fully logged in and registered ---
                         console.log("Real-time user data updated.");
                         const userData = {
                             uid: firebaseUser.uid,
@@ -119,11 +119,19 @@ function App() {
                         presenceUnsubscribe = setupPresence(firebaseUser.uid);
 
                     } else {
-                        // User Auth mein hai, par Firestore mein nahi (Register page par hona chahiye)
+                        // --- STATE 2: User is authenticated but NOT registered in Firestore ---
+                        // This is the "pending registration" state.
                         console.warn("User authenticated but no Firestore profile found:", firebaseUser.uid);
-                        setUser(null); 
+                        // Set a minimal user object with role: null to signify they need to register.
+                        setUser({
+                            uid: firebaseUser.uid,
+                            email: firebaseUser.email,
+                            name: firebaseUser.displayName || 'User',
+                            picture: firebaseUser.photoURL || 'https://via.placeholder.com/40',
+                            role: null // This 'null' role is the key to our logic
+                        });
                         setAuthChecked(true);
-                        if (rtdb) goOffline(rtdb);
+                        if (rtdb) goOffline(rtdb); // Don't show as online until fully registered
                     }
                 }, (error) => {
                     // Agar listener mein error aaye
@@ -134,7 +142,7 @@ function App() {
                 });
                 
             } else {
-                // User logged out hai
+                // --- STATE 3: User is fully logged out ---
                 console.log("User signed out.");
                 setUser(null); 
                 setAuthChecked(true);
@@ -166,7 +174,26 @@ function App() {
         );
     }
 
-    // --- Render Routes ---
+    // --- NEW ROUTING LOGIC ---
+    // If user is authenticated but has no role, they are in "pending registration" state.
+    // Force them to the /register page.
+    if (user && user.role === null) {
+        return (
+            <div className={darkMode ? 'dark' : ''}>
+                <Router>
+                    <NavBar darkMode={darkMode} setDarkMode={setDarkMode} user={user} setUser={setUser} />
+                    <Routes>
+                        {/* Allow ONLY the /register page */}
+                        <Route path="/register" element={<Register setUser={setUser} />} />
+                        {/* Redirect ALL other paths to /register */}
+                        <Route path="*" element={<Navigate to="/register" replace />} />
+                    </Routes>
+                </Router>
+            </div>
+        );
+    }
+
+    // --- Original Render Routes (for fully logged-in or logged-out users) ---
     return (
         <div className={darkMode ? 'dark' : ''}>
             <Router>
@@ -178,6 +205,7 @@ function App() {
                     <Route path="/register" element={user === null ? <Register setUser={setUser} /> : <Navigate to="/feed" replace />} />
 
                     {/* Protected Routes: Render only if user is an object (truthy), otherwise redirect */}
+                    {/* This logic now works correctly, as a "pending" user is handled above */}
                     <Route path="/feed" element={user ? <Feed user={user} /> : <Navigate to="/login" replace />} />
                     <Route path="/search" element={user ? <Search /> : <Navigate to="/login" replace />} />
                     <Route path="/profile/:userId" element={user ? <Profile currentUser={user} setUser={setUser} /> : <Navigate to="/login" replace />} />

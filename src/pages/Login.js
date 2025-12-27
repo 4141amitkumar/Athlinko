@@ -1,93 +1,70 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase'; // Import auth and db
-import { GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth'; // Import Firebase redirect functions
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'; // Import Firebase popup functions
 import { doc, getDoc } from 'firebase/firestore';
 import athleteGif from "../assets/illustrations/Athletics-bro.png";
 import './Login.css';
 
 const Login = ({ setUser }) => {
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(false); // Can indicate processing redirect result
+    const [loading, setLoading] = useState(false); // Can indicate processing
     const [error, setError] = useState('');
 
-    // --- New useEffect to handle redirect result ---
-    useEffect(() => {
-        setLoading(true);
-        getRedirectResult(auth)
-            .then((result) => {
-                if (result) {
-                    // User successfully signed in via redirect
-                    const user = result.user;
-                    console.log("Redirect Result User:", user);
+    // --- Removed useEffect that handled getRedirectResult ---
+    // The popup flow is promise-based and doesn't need a listener on mount.
 
-                    // Check if user exists in Firestore
-                    const userRef = doc(db, "users", user.uid);
-                    return getDoc(userRef).then(docSnap => ({ user, docSnap })); // Pass both user and docSnap
-
-                } else {
-                    // No redirect result, likely initial page load
-                    setLoading(false);
-                    return null; // Indicate no result to process
-                }
-            })
-             .then(data => {
-                 if (!data) return; // Exit if no redirect result was processed
-
-                 const { user, docSnap } = data;
-
-                 if (docSnap.exists()) {
-                     // User exists in Firestore
-                     const userData = {
-                         uid: user.uid,
-                         displayName: user.displayName,
-                         email: user.email,
-                         photoURL: user.photoURL,
-                         ...docSnap.data()
-                     };
-                     setUser(userData);
-                     navigate('/feed', { replace: true }); // Use replace to clear history
-                 } else {
-                     // User is new, navigate to registration
-                     navigate('/register', {
-                         state: {
-                             firebaseUser: {
-                                 uid: user.uid,
-                                 displayName: user.displayName,
-                                 email: user.email,
-                                 photoURL: user.photoURL,
-                             }
-                         },
-                         replace: true // Use replace to clear history
-                     });
-                 }
-            })
-            .catch((error) => {
-                console.error("Error processing redirect result:", error);
-                setError('Login Failed. Please try again.');
-                setLoading(false);
-            });
-            // Intentionally run only once on mount to catch the redirect result
-            // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [navigate, setUser]); // Dependencies added: navigate, setUser
-
-    // --- Updated function to initiate redirect ---
-    const handleGoogleSignInRedirect = async () => {
-        setLoading(true); // Indicate loading before redirect starts
+    // --- Updated function to initiate popup ---
+    const handleGoogleSignInPopup = async () => {
+        setLoading(true); // Indicate loading before popup opens
         setError('');
         const provider = new GoogleAuthProvider();
         try {
-            // This initiates the redirect away from the current page
-            await signInWithRedirect(auth, provider);
-            // No need to setLoading(false) here, as the page will navigate away
+            // This initiates the popup and waits for the result
+            const result = await signInWithPopup(auth, provider);
+            
+            const user = result.user;
+            console.log("Popup Result User:", user);
+
+            // Check if user exists in Firestore
+            const userRef = doc(db, "users", user.uid);
+            const docSnap = await getDoc(userRef);
+
+            if (docSnap.exists()) {
+                 // User exists in Firestore
+                 const userData = {
+                     uid: user.uid,
+                     displayName: user.displayName,
+                     email: user.email,
+                     photoURL: user.photoURL,
+                     ...docSnap.data()
+                 };
+                 setUser(userData);
+                 navigate('/feed', { replace: true }); // Use replace to clear history
+             } else {
+                 // User is new, navigate to registration
+                 navigate('/register', {
+                     state: {
+                         firebaseUser: {
+                             uid: user.uid,
+                             displayName: user.displayName,
+                             email: user.email,
+                             photoURL: user.photoURL,
+                         }
+                     },
+                     replace: true // Use replace to clear history
+                 });
+             }
         } catch (error) {
-            console.error("Error initiating Google sign-in redirect:", error);
-            setError('Failed to start Google Sign-In. Please try again.');
-            setLoading(false); // Set loading false only if redirect fails immediately
+            console.error("Error during Google sign-in popup:", error);
+            if (error.code !== 'auth/popup-closed-by-user') {
+                setError('Login Failed. Please try again.');
+            }
+            setLoading(false); // Set loading false only if popup fails or is closed
         }
     };
 
-    // Show loading indicator while processing redirect result
+    // Show loading indicator while processing
     if (loading) {
         return (
              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 70px)' }}>
@@ -106,8 +83,8 @@ const Login = ({ setUser }) => {
                         Continue your athletic journey with us.
                     </p>
                     <div className="google-auth-btn-container">
-                         {/* Button now triggers redirect */}
-                         <button className="auth-btn google-sign-in-btn" onClick={handleGoogleSignInRedirect}>
+                         {/* Button now triggers popup */}
+                         <button className="auth-btn google-sign-in-btn" onClick={handleGoogleSignInPopup}>
                              <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" style={{ marginRight: '10px', height: '20px' }} />
                              Sign in with Google
                          </button>
@@ -133,4 +110,3 @@ const Login = ({ setUser }) => {
 };
 
 export default Login;
-

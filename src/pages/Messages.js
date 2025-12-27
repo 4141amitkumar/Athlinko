@@ -31,14 +31,26 @@ const Messages = ({ currentUser }) => {
     useEffect(() => {
         if (!currentUser) return;
         setLoading(true);
+
+        // *** BUG FIX ***
+        // Removed `orderBy('lastMessageTimestamp', 'desc')` from the query.
+        // This query (array-contains + orderBy) requires a composite index in Firestore.
+        // We will query without the sort and sort it in JavaScript instead.
         const q = query(
             collection(db, 'conversations'),
-            where('participants', 'array-contains', currentUser.uid), // Use uid
-            orderBy('lastMessageTimestamp', 'desc')
+            where('participants', 'array-contains', currentUser.uid) // Use uid
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const convos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Sort in JavaScript to avoid index requirement
+            convos.sort((a, b) => {
+                const timeA = a.lastMessageTimestamp?.toDate() || 0;
+                const timeB = b.lastMessageTimestamp?.toDate() || 0;
+                return timeB - timeA; // Newest first
+            });
+
             setConversations(convos);
             setLoading(false);
         });
@@ -48,6 +60,7 @@ const Messages = ({ currentUser }) => {
     
     // Active chat aur messages handle karein
     useEffect(() => {
+        // Reset active conversation if ID is null/undefined
         if (!conversationId || !currentUser) {
             setActiveConversation(null);
             setMessages([]);
@@ -61,9 +74,15 @@ const Messages = ({ currentUser }) => {
                 const convoData = convoSnap.data();
                 const otherUserId = convoData.participants.find(p => p !== currentUser.uid); // Use uid
                 
-                if (otherUserId) {
+                if (otherUserId && convoData.participantInfo && convoData.participantInfo[otherUserId]) {
                     setActiveConversation({ id: conversationId, otherUserId, ...convoData.participantInfo[otherUserId] });
+                } else {
+                     console.error("Conversation data is missing participant info for:", otherUserId);
+                     setActiveConversation(null); // Set to null if data is incomplete
                 }
+            } else {
+                console.warn("Conversation doc not found:", conversationId);
+                setActiveConversation(null); // Set to null if doc doesn't exist
             }
         };
         
@@ -110,6 +129,8 @@ const Messages = ({ currentUser }) => {
             });
 
             return () => unsubscribeStatus();
+        } else {
+            setOtherUserStatus({ state: 'offline' }); // Reset if no active user
         }
     }, [activeConversation]);
 
@@ -120,41 +141,47 @@ const Messages = ({ currentUser }) => {
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !conversationId) return;
+        if (!newMessage.trim() || !conversationId || !activeConversation) return;
 
         const convoRef = doc(db, 'conversations', conversationId);
         const messagesColRef = collection(convoRef, 'messages');
 
         const newMsgTimestamp = serverTimestamp();
 
-        await addDoc(messagesColRef, {
-            senderId: currentUser.uid, // Use uid
-            text: newMessage,
-            timestamp: newMsgTimestamp,
-            status: 'sent' // Initial status
-        });
+        try {
+            await addDoc(messagesColRef, {
+                senderId: currentUser.uid, // Use uid
+                text: newMessage,
+                timestamp: newMsgTimestamp,
+                status: 'sent' // Initial status
+            });
 
-        await updateDoc(convoRef, {
-            lastMessage: newMessage,
-            lastMessageSenderId: currentUser.uid, // Track karein ki last message kisne bheja
-            lastMessageTimestamp: newMsgTimestamp,
-            [`participantInfo.${currentUser.uid}.lastRead`]: newMsgTimestamp // Sender ne toh padh hi liya
-        });
+            await updateDoc(convoRef, {
+                lastMessage: newMessage,
+                lastMessageSenderId: currentUser.uid, // Track karein ki last message kisne bheja
+                lastMessageTimestamp: newMsgTimestamp,
+                [`participantInfo.${currentUser.uid}.lastRead`]: newMsgTimestamp // Sender ne toh padh hi liya
+            });
 
-        // ** NOTIFICATION TRIGGER **
-        const otherUserId = activeConversation?.otherUserId;
-        if (otherUserId) {
-            createNotification(
-                otherUserId,
-                `New message from ${currentUser.name}`,
-                `/messages/${conversationId}`
-            );
+            // ** NOTIFICATION TRIGGER **
+            const otherUserId = activeConversation?.otherUserId;
+            if (otherUserId) {
+                createNotification(
+                    otherUserId,
+                    `New message from ${currentUser.name}`,
+                    `/messages/${conversationId}`
+                );
+            }
+
+            setNewMessage('');
+        } catch (error) {
+            console.error("Error sending message:", error);
+            // Optionally show an error to the user
         }
-
-        setNewMessage('');
     };
     
     const getOtherParticipant = (convo) => {
+        if (!convo || !convo.participants || !convo.participantInfo) return null;
         const otherUserId = convo.participants.find(p => p !== currentUser.uid); // Use uid
         return convo.participantInfo[otherUserId];
     };

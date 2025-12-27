@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch, serverTimestamp, arrayUnion } from 'firebase/firestore';
-import { Check, X } from 'lucide-react';
+// Import the notification helper
+import { createNotification } from '../utils/notifications';
 import './Requests.css';
 
 const Requests = ({ currentUser }) => {
@@ -18,7 +19,7 @@ const Requests = ({ currentUser }) => {
         // Listener for received requests
         const receivedQuery = query(
             collection(db, 'requests'),
-            where('receiverId', '==', currentUser.uid), // Use uid instead of sub
+            where('receiverId', '==', currentUser.uid), // Use uid
             where('status', '==', 'pending')
         );
         const unsubscribeReceived = onSnapshot(receivedQuery, (snapshot) => {
@@ -30,7 +31,7 @@ const Requests = ({ currentUser }) => {
         // Listener for sent requests
         const sentQuery = query(
             collection(db, 'requests'),
-            where('senderId', '==', currentUser.uid), // Use uid instead of sub
+            where('senderId', '==', currentUser.uid), // Use uid
             where('status', '==', 'pending')
         );
         const unsubscribeSent = onSnapshot(sentQuery, (snapshot) => {
@@ -44,17 +45,36 @@ const Requests = ({ currentUser }) => {
         };
     }, [currentUser]);
 
+    // *** BUG FIX ***
+    // This logic now matches the "self-healing" logic in NavBar.js
     const handleAcceptRequest = async (request) => {
+      if (!currentUser?.uid) return;
+
       const batch = writeBatch(db);
+
+      // 1. Request document ko update karein
       const requestRef = doc(db, 'requests', request.id);
       batch.update(requestRef, { status: 'accepted', updatedAt: serverTimestamp() });
-      const currentUserRef = doc(db, 'users', request.receiverId);
+      
+      // 2. Current user (receiver) ki connection list update karein
+      const currentUserRef = doc(db, 'users', request.receiverId); // request.receiverId is currentUser.uid
       batch.update(currentUserRef, { connections: arrayUnion(request.senderId) });
-      const senderUserRef = doc(db, 'users', request.senderId);
-      batch.update(senderUserRef, { connections: arrayUnion(request.receiverId) });
+      
+      // 3. Sender ki list update karne waali line HATA DI GAYI hai
+      // This will be fixed by the "self-healing" logic in Profile.js
+
       try {
-          await batch.commit();
-      } catch (error) { console.error("Error accepting request:", error); }
+          await batch.commit(); // Ab yeh batch successful hoga
+          
+          // 4. Sender ko notification bhejein (batch ke baad)
+          await createNotification(
+              request.senderId, 
+              `${currentUser.name} accepted your connection request.`, 
+              `/profile/${currentUser.uid}`
+          );
+      } catch (error) { 
+          console.error("Error accepting request:", error); 
+      }
     };
   
     const handleRejectRequest = async (requestId) => {
@@ -74,7 +94,7 @@ const Requests = ({ currentUser }) => {
                     <div className="requests-list-full">
                         {receivedRequests.length > 0 ? receivedRequests.map(req => (
                             <div key={req.id} className="request-card">
-                                <img src={req.senderPicture} alt={req.senderName} />
+                                <img src={req.senderPicture} alt={req.senderName} onError={(e) => { e.target.onerror = null; e.target.src="https://via.placeholder.com/50"; }} />
                                 <div className="request-card-info">
                                     <Link to={`/profile/${req.senderId}`}>{req.senderName}</Link>
                                     <span>Wants to connect with you.</span>
@@ -94,7 +114,7 @@ const Requests = ({ currentUser }) => {
                  <div className="requests-list-full">
                     {sentRequests.length > 0 ? sentRequests.map(req => (
                         <div key={req.id} className="request-card">
-                            <img src={req.receiverPicture} alt={req.receiverName} />
+                            <img src={req.receiverPicture} alt={req.receiverName} onError={(e) => { e.target.onerror = null; e.target.src="https://via.placeholder.com/50"; }} />
                             <div className="request-card-info">
                                 <Link to={`/profile/${req.receiverId}`}>{req.receiverName}</Link>
                                 <span>Request pending.</span>
